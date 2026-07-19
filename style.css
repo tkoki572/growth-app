@@ -1,0 +1,320 @@
+:root {
+  --background: #f3f3f1;
+  --card: #ffffff;
+  --text: #202020;
+  --muted: #737373;
+  --line: #e5e5e2;
+  --soft: #f7f7f5;
+  --accent: #3b82f6;
+  --accent-2: #10b981;
+  --danger: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  padding: 32px 16px 56px;
+  color: var(--text);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+input[type="checkbox"],
+input[type="range"] {
+  cursor: pointer;
+}
+
+.app {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.app-header {
+  padding: 10px 4px 22px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(25px, 7vw, 34px);
+  line-height: 1.3;
+}
+
+.app-header > p:last-child {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.card {
+  margin-bottom: 14px;
+  padding: 22px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .035);
+}
+
+h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.section-heading,
+.progress-label,
+.range-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.level-number {
+  font-size: 27px;
+}
+
+.progress-label {
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.progress-track {
+  height: 12px;
+  overflow: hidden;
+  background: #e9e9e7;
+  border-radius: 999px;
+}
+
+.progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  transition: width .25s ease;
+}
+
+.level-bar {
+  background: var(--accent);
+}
+
+.achievement-bar {
+  background: var(--accent-2);
+}
+
+.sub-text,
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sub-text {
+  margin: 10px 0 0;
+}
+
+.badge,
+.point-chip {
+  padding: 5px 9px;
+  color: #4b4b4b;
+  background: #eeeeeb;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 17px;
+}
+
+input[type="text"],
+textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 13px;
+  color: var(--text);
+  background: white;
+  border: 1px solid #cececa;
+  border-radius: 9px;
+  outline: none;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  border-color: #555;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
+}
+
+button {
+  min-height: 44px;
+  padding: 10px 15px;
+  color: white;
+  background: #262626;
+  border: 0;
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+button:hover {
+  background: #444;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.check-row,
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 52px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  background: var(--soft);
+  border-radius: 10px;
+}
+
+.empty-row {
+  color: var(--muted);
+}
+
+input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
+  accent-color: #292929;
+}
+
+.check-row > span:nth-child(2),
+.item-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.item-list {
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-row {
+  margin-top: 8px;
+}
+
+.item-row.completed .item-text {
+  color: #999;
+  text-decoration: line-through;
+}
+
+.delete-button {
+  min-width: 44px;
+  min-height: 38px;
+  padding: 7px 10px;
+  color: #555;
+  background: #e7e7e3;
+}
+
+.delete-button:hover {
+  color: var(--danger);
+  background: #deded9;
+}
+
+.error-message {
+  min-height: 18px;
+  margin: 5px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.hint {
+  margin: 13px 0 0;
+  line-height: 1.6;
+}
+
+.range-heading {
+  margin-top: 18px;
+  font-weight: 700;
+}
+
+.range-input {
+  width: 100%;
+  margin: 15px 0 21px;
+  accent-color: #333;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.field-label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.save-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.save-message {
+  min-height: 20px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 18px 10px 40px;
+  }
+
+  .card {
+    padding: 18px 15px;
+    border-radius: 13px;
+  }
+
+  .input-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .input-row button {
+    width: 100%;
+  }
+
+  .progress-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}

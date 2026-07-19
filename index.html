@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自己成長アプリ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <p class="eyebrow">SELF GROWTH</p>
+      <h1>昨日の自分より、少し前へ。</h1>
+      <p>毎日3分、小さな達成を積み重ねよう。</p>
+    </header>
+
+    <section class="card" aria-labelledby="levelHeading">
+      <div class="section-heading">
+        <h2 id="levelHeading">レベル</h2>
+        <strong id="levelText" class="level-number">Lv.1</strong>
+      </div>
+      <div class="progress-label">
+        <span id="pointText">0 / 40pt</span>
+        <span id="levelRemainingText">あと40ptでLevel Up</span>
+      </div>
+      <div class="progress-track" role="progressbar" aria-label="レベル進捗">
+        <div id="levelProgress" class="progress-bar level-bar"></div>
+      </div>
+      <p id="totalPointText" class="sub-text">累計 0pt</p>
+    </section>
+
+    <section class="card" aria-labelledby="achievementHeading">
+      <div class="section-heading">
+        <h2 id="achievementHeading">今日の達成率</h2>
+        <strong id="achievementText">0%</strong>
+      </div>
+      <div class="progress-track" role="progressbar" aria-label="今日の達成率">
+        <div id="achievementProgress" class="progress-bar achievement-bar"></div>
+      </div>
+      <p id="achievementDetail" class="sub-text">対象項目はまだありません</p>
+    </section>
+
+    <section class="card" aria-labelledby="habitHeading">
+      <div class="section-heading">
+        <h2 id="habitHeading">習慣</h2>
+        <span id="habitStreak" class="badge">連続 0日</span>
+      </div>
+      <form id="habitForm" class="input-row">
+        <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
+        <button type="submit">登録・変更</button>
+      </form>
+      <label id="habitCheckLabel" class="check-row empty-row">
+        <input id="habitCheckbox" type="checkbox" disabled>
+        <span id="habitName">習慣を登録してください</span>
+        <span class="point-chip">+5pt</span>
+      </label>
+    </section>
+
+    <section class="card" aria-labelledby="missionHeading">
+      <div class="section-heading">
+        <h2 id="missionHeading">今日のMission</h2>
+        <span id="missionCount" class="sub-text">0 / 3件</span>
+      </div>
+      <form id="missionForm" class="input-row">
+        <input id="missionInput" type="text" maxlength="80" placeholder="今日やり遂げたいこと" aria-label="Mission">
+        <button id="missionAddButton" type="submit">追加</button>
+      </form>
+      <p id="missionError" class="error-message" role="alert"></p>
+      <ul id="missionList" class="item-list"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="taskHeading">
+      <div class="section-heading">
+        <h2 id="taskHeading">その他のタスク</h2>
+        <span id="taskCount" class="sub-text">未完了 0件</span>
+      </div>
+      <form id="taskForm" class="input-row">
+        <input id="taskInput" type="text" maxlength="100" placeholder="やることを入力" aria-label="通常タスク">
+        <button type="submit">追加</button>
+      </form>
+      <p id="taskError" class="error-message" role="alert"></p>
+      <ul id="taskList" class="item-list"></ul>
+      <p class="hint">今日の完了：1〜5件目は+2pt、6〜10件目は+1pt</p>
+    </section>
+
+    <section class="card" aria-labelledby="reflectionHeading">
+      <h2 id="reflectionHeading">今日の振り返り</h2>
+      <form id="reflectionForm">
+        <div class="range-heading">
+          <label for="satisfactionRange">今日の充実度</label>
+          <output id="satisfactionValue" for="satisfactionRange">3 / 5</output>
+        </div>
+        <input id="satisfactionRange" class="range-input" type="range" min="1" max="5" value="3">
+        <label class="field-label" for="goodThingInput">今日、一番よかったことは？ <span>（任意）</span></label>
+        <textarea id="goodThingInput" rows="3" maxlength="300" placeholder="小さなことでも大丈夫です"></textarea>
+        <button class="save-button" type="submit">今日の振り返りを保存</button>
+        <p id="reflectionMessage" class="save-message" role="status"></p>
+      </form>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
