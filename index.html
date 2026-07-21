@@ -10,11 +10,12 @@
   <main class="app">
     <header class="app-header">
       <p class="eyebrow">SELF GROWTH</p>
+      <p id="currentDate" class="current-date"></p>
       <h1>昨日の自分より、少し前へ。</h1>
       <p>毎日3分、小さな達成を積み重ねよう。</p>
     </header>
 
-    <section class="card" aria-labelledby="levelHeading">
+    <section id="levelCard" class="card" aria-labelledby="levelHeading">
       <div class="section-heading">
         <h2 id="levelHeading">レベル</h2>
         <strong id="levelText" class="level-number">Lv.1</strong>
@@ -42,13 +43,14 @@
 
     <section class="card" aria-labelledby="habitHeading">
       <div class="section-heading">
-        <h2 id="habitHeading">習慣</h2>
+        <h2 id="habitHeading">続けたい習慣</h2>
         <span id="habitStreak" class="badge">連続 0日</span>
       </div>
       <form id="habitForm" class="input-row">
         <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
         <button type="submit">登録・変更</button>
       </form>
+      <button id="habitEditButton" class="edit-button" type="button" hidden>編集</button>
       <label id="habitCheckLabel" class="check-row empty-row">
         <input id="habitCheckbox" type="checkbox" disabled>
         <span id="habitName">習慣を登録してください</span>
@@ -71,7 +73,7 @@
 
     <section class="card" aria-labelledby="taskHeading">
       <div class="section-heading">
-        <h2 id="taskHeading">その他のタスク</h2>
+        <h2 id="taskHeading">Todo</h2>
         <span id="taskCount" class="sub-text">未完了 0件</span>
       </div>
       <form id="taskForm" class="input-row">
@@ -83,7 +85,7 @@
       <p class="hint">今日の完了：1〜5件目は+2pt、6〜10件目は+1pt</p>
     </section>
 
-    <section class="card" aria-labelledby="reflectionHeading">
+    <section id="reflectionSection" class="card" aria-labelledby="reflectionHeading">
       <h2 id="reflectionHeading">今日の振り返り</h2>
       <form id="reflectionForm">
         <div class="range-heading">
@@ -98,6 +100,7 @@
       </form>
     </section>
   </main>
+  <div id="levelUpNotice" class="level-up-notice" role="status" aria-live="polite">LEVEL UP!</div>
   <script src="script.js"></script>
 </body>
 </html>

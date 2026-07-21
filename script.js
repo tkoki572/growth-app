@@ -1,6 +1,7 @@
 const STORAGE_KEY = "selfGrowthAppState";
 const OLD_TODO_STORAGE_KEY = "todos";
 const POINTS_PER_LEVEL = 40;
+let levelUpAnimationPending = false;
 
 function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -18,7 +19,7 @@ function getPreviousDateString(dateString) {
 
 function createInitialState() {
   return {
-    version: 1,
+    version: 2,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -47,6 +48,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
+    version: 2,
     habit: { ...initialState.habit, ...savedHabit },
     daily: { ...initialState.daily, ...savedDaily },
     missions: Array.isArray(savedState?.missions) ? savedState.missions : [],
@@ -103,6 +105,9 @@ let state = loadState();
 handleDateChange();
 
 const elements = {
+  currentDate: document.getElementById("currentDate"),
+  levelCard: document.getElementById("levelCard"),
+  levelUpNotice: document.getElementById("levelUpNotice"),
   levelText: document.getElementById("levelText"),
   pointText: document.getElementById("pointText"),
   levelRemainingText: document.getElementById("levelRemainingText"),
@@ -112,6 +117,7 @@ const elements = {
   achievementProgress: document.getElementById("achievementProgress"),
   achievementDetail: document.getElementById("achievementDetail"),
   habitForm: document.getElementById("habitForm"),
+  habitEditButton: document.getElementById("habitEditButton"),
   habitInput: document.getElementById("habitInput"),
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
@@ -129,6 +135,7 @@ const elements = {
   taskList: document.getElementById("taskList"),
   taskCount: document.getElementById("taskCount"),
   reflectionForm: document.getElementById("reflectionForm"),
+  reflectionSection: document.getElementById("reflectionSection"),
   satisfactionRange: document.getElementById("satisfactionRange"),
   satisfactionValue: document.getElementById("satisfactionValue"),
   goodThingInput: document.getElementById("goodThingInput"),
@@ -137,6 +144,12 @@ const elements = {
 
 setUpEventListeners();
 renderAll();
+window.setInterval(() => {
+  const beforeDate = state.lastUsedDate;
+  handleDateChange();
+  if (state.lastUsedDate !== beforeDate) renderAll();
+  else renderCurrentDateAndReflectionVisibility();
+}, 60000);
 
 function handleDateChange() {
   const today = getLocalDateString();
@@ -148,6 +161,7 @@ function handleDateChange() {
   state.lastUsedDate = today;
   state.habit.completedToday = false;
   state.missions = [];
+  state.tasks = state.tasks.filter((task) => !task.completed);
   state.daily = {
     date: today,
     taskPointCount: 0,
@@ -159,6 +173,7 @@ function handleDateChange() {
 function setUpEventListeners() {
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
+  elements.habitEditButton.addEventListener("click", editHabitName);
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskForm.addEventListener("submit", addTask);
   elements.reflectionForm.addEventListener("submit", saveReflection);
@@ -166,7 +181,11 @@ function setUpEventListeners() {
 }
 
 function addPoints(points) {
+  const previousLevel = Math.floor(state.totalPoints / POINTS_PER_LEVEL);
   state.totalPoints += points;
+  levelUpAnimationPending =
+    levelUpAnimationPending ||
+    Math.floor(state.totalPoints / POINTS_PER_LEVEL) > previousLevel;
 }
 
 function saveHabitName(event) {
@@ -184,11 +203,27 @@ function saveHabitName(event) {
   renderAll();
 }
 
+function editHabitName() {
+  elements.habitInput.value = state.habit.name;
+  elements.habitForm.hidden = false;
+  elements.habitEditButton.hidden = true;
+  elements.habitInput.focus();
+}
+
+function vibrateOnCompletion() {
+  try {
+    if (typeof navigator.vibrate === "function") navigator.vibrate(40);
+  } catch (error) {
+    // 振動非対応・制限中でも完了処理は継続します。
+  }
+}
+
 function toggleHabit() {
   const today = getLocalDateString();
   state.habit.completedToday = elements.habitCheckbox.checked;
 
   if (state.habit.completedToday) {
+    vibrateOnCompletion();
     updateHabitStreak(today);
 
     if (!state.habit.pointAwardDates.includes(today)) {
@@ -239,6 +274,7 @@ function toggleMission(id) {
   if (!mission) return;
 
   mission.completed = !mission.completed;
+  if (mission.completed) vibrateOnCompletion();
   checkAndAwardAchievementBonus();
   saveState();
   renderAll();
@@ -278,6 +314,7 @@ function toggleTask(id) {
   if (!task) return;
 
   task.completed = !task.completed;
+  if (task.completed) vibrateOnCompletion();
 
   if (task.completed && !task.pointAwarded) {
     const points = getNextTaskPoints();
@@ -341,12 +378,27 @@ function saveReflection(event) {
 }
 
 function renderAll() {
+  renderCurrentDate();
   renderLevel();
   renderAchievement();
   renderHabit();
   renderMissions();
   renderTasks();
   renderReflection();
+  renderLevelUpAnimation();
+}
+
+function renderCurrentDate() {
+  const now = new Date();
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  elements.currentDate.textContent =
+    `${now.getMonth() + 1}月${now.getDate()}日（${weekdays[now.getDay()]}）`;
+}
+
+function renderCurrentDateAndReflectionVisibility() {
+  renderCurrentDate();
+  const hour = new Date().getHours();
+  elements.reflectionSection.hidden = !(hour >= 18 || hour < 5);
 }
 
 function renderLevel() {
@@ -388,6 +440,8 @@ function renderHabit() {
   elements.habitCheckbox.checked = hasHabit && state.habit.completedToday;
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
   elements.habitStreak.textContent = `連続 ${state.habit.streak}日`;
+  elements.habitForm.hidden = hasHabit;
+  elements.habitEditButton.hidden = !hasHabit;
 }
 
 function renderMissions() {
@@ -395,7 +449,11 @@ function renderMissions() {
   elements.missionCount.textContent = `${state.missions.length} / 3件`;
   elements.missionAddButton.disabled = state.missions.length >= 3;
 
-  state.missions.forEach((mission) => {
+  const sortedMissions = [...state.missions].sort(
+    (first, second) => Number(first.completed) - Number(second.completed)
+  );
+
+  sortedMissions.forEach((mission) => {
     elements.missionList.appendChild(
       createListItem(mission, toggleMission, deleteMission)
     );
@@ -442,6 +500,9 @@ function createListItem(item, onToggle, onDelete) {
 }
 
 function renderReflection() {
+  renderCurrentDateAndReflectionVisibility();
+  if (elements.reflectionSection.hidden) return;
+
   const todayReflection = state.reflections[getLocalDateString()];
 
   if (todayReflection) {
@@ -450,6 +511,21 @@ function renderReflection() {
   }
 
   updateSatisfactionLabel();
+}
+
+function renderLevelUpAnimation() {
+  if (!levelUpAnimationPending) return;
+  levelUpAnimationPending = false;
+  elements.levelCard.classList.remove("level-up");
+  elements.levelUpNotice.classList.remove("show");
+  requestAnimationFrame(() => {
+    elements.levelCard.classList.add("level-up");
+    elements.levelUpNotice.classList.add("show");
+    window.setTimeout(() => {
+      elements.levelCard.classList.remove("level-up");
+      elements.levelUpNotice.classList.remove("show");
+    }, 1200);
+  });
 }
 
 function updateSatisfactionLabel() {
