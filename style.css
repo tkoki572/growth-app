@@ -130,8 +130,20 @@ h2 {
   background: var(--accent-2);
 }
 
-.sub-text,
-.hint {
+.achievement-value {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.achievement-unit {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.sub-text {
   color: var(--muted);
   font-size: 13px;
 }
@@ -194,11 +206,60 @@ button:disabled {
   opacity: .4;
 }
 
-.edit-button {
-  width: 100%;
-  margin-top: 12px;
-  color: #555;
-  background: #e7e7e3;
+.habit-card {
+  border-color: #d9e2ef;
+  box-shadow: 0 5px 18px rgba(59, 130, 246, .07);
+}
+
+.habit-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.habit-streak {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.habit-edit-button {
+  display: inline-grid;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  place-items: center;
+  color: #666;
+  background: transparent;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+.habit-edit-button:hover {
+  color: var(--text);
+  background: var(--soft);
+}
+
+.habit-row {
+  min-height: 62px;
+  margin-top: 16px;
+}
+
+.habit-row #habitName {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.mission-complete-message {
+  margin: 8px 0 0;
+  color: #28735a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mission-complete-message:empty {
+  display: none;
 }
 
 .level-up-notice {
@@ -297,11 +358,6 @@ input[type="checkbox"] {
   margin: 5px 0 0;
   color: var(--danger);
   font-size: 13px;
-}
-
-.hint {
-  margin: 13px 0 0;
-  line-height: 1.6;
 }
 
 .range-heading {

@@ -21,19 +21,19 @@
         <strong id="levelText" class="level-number">Lv.1</strong>
       </div>
       <div class="progress-label">
-        <span id="pointText">0 / 40pt</span>
-        <span id="levelRemainingText">あと40ptでLevel Up</span>
+        <span id="pointText">0 / 40XP</span>
+        <span id="levelRemainingText">あと40XPでLevel Up</span>
       </div>
       <div class="progress-track" role="progressbar" aria-label="レベル進捗">
         <div id="levelProgress" class="progress-bar level-bar"></div>
       </div>
-      <p id="totalPointText" class="sub-text">累計 0pt</p>
+      <p id="totalPointText" class="sub-text">累計 0XP</p>
     </section>
 
     <section class="card" aria-labelledby="achievementHeading">
       <div class="section-heading">
         <h2 id="achievementHeading">今日の達成率</h2>
-        <strong id="achievementText">0%</strong>
+        <strong class="achievement-value"><span id="achievementText">0</span><span class="achievement-unit">%</span></strong>
       </div>
       <div class="progress-track" role="progressbar" aria-label="今日の達成率">
         <div id="achievementProgress" class="progress-bar achievement-bar"></div>
@@ -41,20 +41,22 @@
       <p id="achievementDetail" class="sub-text">対象項目はまだありません</p>
     </section>
 
-    <section class="card" aria-labelledby="habitHeading">
+    <section class="card habit-card" aria-labelledby="habitHeading">
       <div class="section-heading">
         <h2 id="habitHeading">続けたい習慣</h2>
-        <span id="habitStreak" class="badge">連続 0日</span>
+        <div class="habit-meta">
+          <span id="habitStreak" class="habit-streak">連続 0日</span>
+          <button id="habitEditButton" class="habit-edit-button" type="button" aria-label="習慣を編集" title="習慣を編集" hidden>✎</button>
+        </div>
       </div>
       <form id="habitForm" class="input-row">
         <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
         <button type="submit">登録・変更</button>
       </form>
-      <button id="habitEditButton" class="edit-button" type="button" hidden>編集</button>
-      <label id="habitCheckLabel" class="check-row empty-row">
+      <label id="habitCheckLabel" class="check-row habit-row empty-row">
         <input id="habitCheckbox" type="checkbox" disabled>
         <span id="habitName">習慣を登録してください</span>
-        <span class="point-chip">+5pt</span>
+        <span class="point-chip">+5XP</span>
       </label>
     </section>
 
@@ -68,21 +70,21 @@
         <button id="missionAddButton" type="submit">追加</button>
       </form>
       <p id="missionError" class="error-message" role="alert"></p>
+      <p id="missionCompleteMessage" class="mission-complete-message" role="status"></p>
       <ul id="missionList" class="item-list"></ul>
     </section>
 
     <section class="card" aria-labelledby="taskHeading">
       <div class="section-heading">
         <h2 id="taskHeading">Todo</h2>
-        <span id="taskCount" class="sub-text">未完了 0件</span>
+        <span id="taskCount" class="sub-text">0件</span>
       </div>
       <form id="taskForm" class="input-row">
-        <input id="taskInput" type="text" maxlength="100" placeholder="やることを入力" aria-label="通常タスク">
+        <input id="taskInput" type="text" maxlength="100" placeholder="やることを入力" aria-label="Todo">
         <button type="submit">追加</button>
       </form>
       <p id="taskError" class="error-message" role="alert"></p>
       <ul id="taskList" class="item-list"></ul>
-      <p class="hint">今日の完了：1〜5件目は+2pt、6〜10件目は+1pt</p>
     </section>
 
     <section id="reflectionSection" class="card" aria-labelledby="reflectionHeading">

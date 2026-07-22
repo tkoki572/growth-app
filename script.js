@@ -1,7 +1,16 @@
 const STORAGE_KEY = "selfGrowthAppState";
 const OLD_TODO_STORAGE_KEY = "todos";
-const POINTS_PER_LEVEL = 40;
+const XP_RULES = Object.freeze({
+  habit: 5,
+  mission: 2,
+  missionMaxCount: 3,
+  todo: 1,
+  todoMaxCount: 5,
+  completionBonus: 5,
+  levelThreshold: 40
+});
 let levelUpAnimationPending = false;
+let missionCompleteMessageTimer = null;
 
 function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -19,7 +28,7 @@ function getPreviousDateString(dateString) {
 
 function createInitialState() {
   return {
-    version: 2,
+    version: 3,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -33,7 +42,8 @@ function createInitialState() {
     tasks: [],
     daily: {
       date: getLocalDateString(),
-      taskPointCount: 0,
+      missionXpCount: 0,
+      todoXpCount: 0,
       achievementBonusAwarded: false
     },
     reflections: {}
@@ -48,10 +58,26 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 2,
+    version: 3,
     habit: { ...initialState.habit, ...savedHabit },
-    daily: { ...initialState.daily, ...savedDaily },
-    missions: Array.isArray(savedState?.missions) ? savedState.missions : [],
+    daily: {
+      ...initialState.daily,
+      ...savedDaily,
+      missionXpCount: Number(savedDaily.missionXpCount) || 0,
+      todoXpCount: Math.min(
+        Number(savedDaily.todoXpCount ?? savedDaily.taskPointCount) || 0,
+        XP_RULES.todoMaxCount
+      )
+    },
+    missions: Array.isArray(savedState?.missions)
+      ? savedState.missions.map((mission) => ({
+          ...mission,
+          pointAwarded:
+            typeof mission.pointAwarded === "boolean"
+              ? mission.pointAwarded
+              : Boolean(mission.completed)
+        }))
+      : [],
     tasks: Array.isArray(savedState?.tasks) ? savedState.tasks : [],
     reflections:
       savedState?.reflections && typeof savedState.reflections === "object"
@@ -127,6 +153,7 @@ const elements = {
   missionInput: document.getElementById("missionInput"),
   missionAddButton: document.getElementById("missionAddButton"),
   missionError: document.getElementById("missionError"),
+  missionCompleteMessage: document.getElementById("missionCompleteMessage"),
   missionList: document.getElementById("missionList"),
   missionCount: document.getElementById("missionCount"),
   taskForm: document.getElementById("taskForm"),
@@ -164,7 +191,8 @@ function handleDateChange() {
   state.tasks = state.tasks.filter((task) => !task.completed);
   state.daily = {
     date: today,
-    taskPointCount: 0,
+    missionXpCount: 0,
+    todoXpCount: 0,
     achievementBonusAwarded: false
   };
   saveState();
@@ -181,11 +209,11 @@ function setUpEventListeners() {
 }
 
 function addPoints(points) {
-  const previousLevel = Math.floor(state.totalPoints / POINTS_PER_LEVEL);
+  const previousLevel = Math.floor(state.totalPoints / XP_RULES.levelThreshold);
   state.totalPoints += points;
   levelUpAnimationPending =
     levelUpAnimationPending ||
-    Math.floor(state.totalPoints / POINTS_PER_LEVEL) > previousLevel;
+    Math.floor(state.totalPoints / XP_RULES.levelThreshold) > previousLevel;
 }
 
 function saveHabitName(event) {
@@ -228,7 +256,7 @@ function toggleHabit() {
 
     if (!state.habit.pointAwardDates.includes(today)) {
       state.habit.pointAwardDates.push(today);
-      addPoints(5);
+      addPoints(XP_RULES.habit);
     }
   }
 
@@ -257,16 +285,24 @@ function addMission(event) {
     return;
   }
 
-  if (state.missions.length >= 3) {
+  if (state.missions.length >= XP_RULES.missionMaxCount) {
     elements.missionError.textContent = "Missionは3件まで登録できます。";
     return;
   }
 
-  state.missions.push({ id: createId(), text, completed: false });
+  state.missions.push({ id: createId(), text, completed: false, pointAwarded: false });
   elements.missionInput.value = "";
+  elements.missionInput.blur();
   elements.missionError.textContent = "";
   saveState();
   renderAll();
+  if (state.missions.length === XP_RULES.missionMaxCount) {
+    elements.missionCompleteMessage.textContent = "🎯 今日のMission完成！";
+    window.clearTimeout(missionCompleteMessageTimer);
+    missionCompleteMessageTimer = window.setTimeout(() => {
+      elements.missionCompleteMessage.textContent = "";
+    }, 3000);
+  }
 }
 
 function toggleMission(id) {
@@ -274,7 +310,16 @@ function toggleMission(id) {
   if (!mission) return;
 
   mission.completed = !mission.completed;
-  if (mission.completed) vibrateOnCompletion();
+  if (mission.completed) {
+    vibrateOnCompletion();
+    if (!mission.pointAwarded) {
+      if (state.daily.missionXpCount < XP_RULES.missionMaxCount) {
+        addPoints(XP_RULES.mission);
+        state.daily.missionXpCount += 1;
+      }
+      mission.pointAwarded = true;
+    }
+  }
   checkAndAwardAchievementBonus();
   saveState();
   renderAll();
@@ -304,6 +349,7 @@ function addTask(event) {
     completedDate: null
   });
   elements.taskInput.value = "";
+  elements.taskInput.blur();
   elements.taskError.textContent = "";
   saveState();
   renderAll();
@@ -317,22 +363,16 @@ function toggleTask(id) {
   if (task.completed) vibrateOnCompletion();
 
   if (task.completed && !task.pointAwarded) {
-    const points = getNextTaskPoints();
-    addPoints(points);
+    if (state.daily.todoXpCount < XP_RULES.todoMaxCount) {
+      addPoints(XP_RULES.todo);
+      state.daily.todoXpCount += 1;
+    }
     task.pointAwarded = true;
     task.completedDate = getLocalDateString();
-    state.daily.taskPointCount += 1;
   }
 
   saveState();
   renderAll();
-}
-
-function getNextTaskPoints() {
-  const nextCompletionNumber = state.daily.taskPointCount + 1;
-  if (nextCompletionNumber <= 5) return 2;
-  if (nextCompletionNumber <= 10) return 1;
-  return 0;
 }
 
 function deleteTask(id) {
@@ -343,7 +383,9 @@ function deleteTask(id) {
 
 function getAchievement() {
   const hasHabit = Boolean(state.habit.name);
-  const total = state.missions.length + (hasHabit ? 1 : 0);
+  const total = hasHabit || state.missions.length > 0
+    ? XP_RULES.missionMaxCount + 1
+    : 0;
   const completedMissions = state.missions.filter((mission) => mission.completed).length;
   const completed = completedMissions + (hasHabit && state.habit.completedToday ? 1 : 0);
   const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
@@ -354,11 +396,13 @@ function checkAndAwardAchievementBonus() {
   const achievement = getAchievement();
 
   if (
-    achievement.total > 0 &&
-    achievement.completed === achievement.total &&
+    state.habit.name &&
+    state.habit.completedToday &&
+    state.missions.length === XP_RULES.missionMaxCount &&
+    state.missions.every((mission) => mission.completed) &&
     !state.daily.achievementBonusAwarded
   ) {
-    addPoints(10);
+    addPoints(XP_RULES.completionBonus);
     state.daily.achievementBonusAwarded = true;
   }
 }
@@ -374,7 +418,7 @@ function saveReflection(event) {
   };
 
   saveState();
-  elements.reflectionMessage.textContent = `${today} の振り返りを保存しました。`;
+  elements.reflectionMessage.textContent = "今日の振り返りを保存しました。";
 }
 
 function renderAll() {
@@ -402,21 +446,21 @@ function renderCurrentDateAndReflectionVisibility() {
 }
 
 function renderLevel() {
-  const level = Math.floor(state.totalPoints / POINTS_PER_LEVEL) + 1;
-  const currentLevelPoints = state.totalPoints % POINTS_PER_LEVEL;
-  const remainingPoints = POINTS_PER_LEVEL - currentLevelPoints;
-  const percentage = (currentLevelPoints / POINTS_PER_LEVEL) * 100;
+  const level = Math.floor(state.totalPoints / XP_RULES.levelThreshold) + 1;
+  const currentLevelPoints = state.totalPoints % XP_RULES.levelThreshold;
+  const remainingPoints = XP_RULES.levelThreshold - currentLevelPoints;
+  const percentage = (currentLevelPoints / XP_RULES.levelThreshold) * 100;
 
   elements.levelText.textContent = `Lv.${level}`;
-  elements.pointText.textContent = `${currentLevelPoints} / ${POINTS_PER_LEVEL}pt`;
-  elements.levelRemainingText.textContent = `あと${remainingPoints}ptでLevel Up`;
-  elements.totalPointText.textContent = `累計 ${state.totalPoints}pt`;
+  elements.pointText.textContent = `${currentLevelPoints} / ${XP_RULES.levelThreshold}XP`;
+  elements.levelRemainingText.textContent = `あと${remainingPoints}XPでLevel Up`;
+  elements.totalPointText.textContent = `累計 ${state.totalPoints}XP`;
   setProgress(elements.levelProgress, percentage);
 }
 
 function renderAchievement() {
   const achievement = getAchievement();
-  elements.achievementText.textContent = `${achievement.percentage}%`;
+  elements.achievementText.textContent = String(achievement.percentage);
   elements.achievementDetail.textContent =
     achievement.total === 0
       ? "対象項目はまだありません"
@@ -446,8 +490,8 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
-  elements.missionCount.textContent = `${state.missions.length} / 3件`;
-  elements.missionAddButton.disabled = state.missions.length >= 3;
+  elements.missionCount.textContent = `${state.missions.length} / ${XP_RULES.missionMaxCount}件`;
+  elements.missionForm.hidden = state.missions.length >= XP_RULES.missionMaxCount;
 
   const sortedMissions = [...state.missions].sort(
     (first, second) => Number(first.completed) - Number(second.completed)
@@ -471,7 +515,7 @@ function renderTasks() {
   });
 
   const incompleteCount = state.tasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = `未完了 ${incompleteCount}件`;
+  elements.taskCount.textContent = `${incompleteCount}件`;
 }
 
 function createListItem(item, onToggle, onDelete) {
