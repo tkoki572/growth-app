@@ -11,6 +11,8 @@ const XP_RULES = Object.freeze({
 });
 let levelUpAnimationPending = false;
 let missionCompleteMessageTimer = null;
+let pendingXpAnimation = null;
+let editContext = null;
 
 function getLocalDateString(date = new Date()) {
   const year = date.getFullYear();
@@ -28,7 +30,7 @@ function getPreviousDateString(dateString) {
 
 function createInitialState() {
   return {
-    version: 3,
+    version: 4,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -44,7 +46,8 @@ function createInitialState() {
       date: getLocalDateString(),
       missionXpCount: 0,
       todoXpCount: 0,
-      achievementBonusAwarded: false
+      achievementBonusAwarded: false,
+      completionBonusXp: 0
     },
     reflections: {}
   };
@@ -58,7 +61,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 3,
+    version: 4,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -67,7 +70,11 @@ function mergeState(savedState) {
       todoXpCount: Math.min(
         Number(savedDaily.todoXpCount ?? savedDaily.taskPointCount) || 0,
         XP_RULES.todoMaxCount
-      )
+      ),
+      completionBonusXp: Number(savedDaily.completionBonusXp) ||
+        (savedDaily.achievementBonusAwarded
+          ? (Number(savedState?.version) <= 2 ? 10 : XP_RULES.completionBonus)
+          : 0)
     },
     missions: Array.isArray(savedState?.missions)
       ? savedState.missions.map((mission) => ({
@@ -75,10 +82,13 @@ function mergeState(savedState) {
           pointAwarded:
             typeof mission.pointAwarded === "boolean"
               ? mission.pointAwarded
-              : Boolean(mission.completed)
+              : Boolean(mission.completed),
+          xpAwarded: Number(mission.xpAwarded) || 0
         }))
       : [],
-    tasks: Array.isArray(savedState?.tasks) ? savedState.tasks : [],
+    tasks: Array.isArray(savedState?.tasks)
+      ? savedState.tasks.map((task) => ({ ...task, xpAwarded: Number(task.xpAwarded) || 0 }))
+      : [],
     reflections:
       savedState?.reflections && typeof savedState.reflections === "object"
         ? savedState.reflections
@@ -109,6 +119,7 @@ function loadState() {
           text: todo.text,
           completed: Boolean(todo.completed),
           pointAwarded: Boolean(todo.completed),
+          xpAwarded: 0,
           completedDate: null
         }));
     }
@@ -132,7 +143,7 @@ handleDateChange();
 
 const elements = {
   currentDate: document.getElementById("currentDate"),
-  levelCard: document.getElementById("levelCard"),
+  levelCard: document.getElementById("progressCard"),
   levelUpNotice: document.getElementById("levelUpNotice"),
   levelText: document.getElementById("levelText"),
   pointText: document.getElementById("pointText"),
@@ -143,20 +154,23 @@ const elements = {
   achievementProgress: document.getElementById("achievementProgress"),
   achievementDetail: document.getElementById("achievementDetail"),
   habitForm: document.getElementById("habitForm"),
+  habitMenu: document.getElementById("habitMenu"),
   habitEditButton: document.getElementById("habitEditButton"),
+  habitDeleteButton: document.getElementById("habitDeleteButton"),
   habitInput: document.getElementById("habitInput"),
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
+  missionOpenButton: document.getElementById("missionOpenButton"),
   missionInput: document.getElementById("missionInput"),
-  missionAddButton: document.getElementById("missionAddButton"),
   missionError: document.getElementById("missionError"),
   missionCompleteMessage: document.getElementById("missionCompleteMessage"),
   missionList: document.getElementById("missionList"),
   missionCount: document.getElementById("missionCount"),
   taskForm: document.getElementById("taskForm"),
+  taskOpenButton: document.getElementById("taskOpenButton"),
   taskInput: document.getElementById("taskInput"),
   taskError: document.getElementById("taskError"),
   taskList: document.getElementById("taskList"),
@@ -166,7 +180,12 @@ const elements = {
   satisfactionRange: document.getElementById("satisfactionRange"),
   satisfactionValue: document.getElementById("satisfactionValue"),
   goodThingInput: document.getElementById("goodThingInput"),
-  reflectionMessage: document.getElementById("reflectionMessage")
+  reflectionMessage: document.getElementById("reflectionMessage"),
+  editDialog: document.getElementById("editDialog"),
+  editForm: document.getElementById("editForm"),
+  editDialogTitle: document.getElementById("editDialogTitle"),
+  editInput: document.getElementById("editInput"),
+  editCancelButton: document.getElementById("editCancelButton")
 };
 
 setUpEventListeners();
@@ -193,7 +212,8 @@ function handleDateChange() {
     date: today,
     missionXpCount: 0,
     todoXpCount: 0,
-    achievementBonusAwarded: false
+    achievementBonusAwarded: false,
+    completionBonusXp: 0
   };
   saveState();
 }
@@ -201,11 +221,18 @@ function handleDateChange() {
 function setUpEventListeners() {
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
-  elements.habitEditButton.addEventListener("click", editHabitName);
+  elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
+  elements.habitDeleteButton.addEventListener("click", deleteHabit);
+  elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
   elements.missionForm.addEventListener("submit", addMission);
+  elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
   elements.taskForm.addEventListener("submit", addTask);
   elements.reflectionForm.addEventListener("submit", saveReflection);
   elements.satisfactionRange.addEventListener("input", updateSatisfactionLabel);
+  elements.editForm.addEventListener("submit", saveEditedItem);
+  elements.editCancelButton.addEventListener("click", () => elements.editDialog.close());
+  document.addEventListener("toggle", closeOtherMenus, true);
+  document.addEventListener("click", closeMenusFromOutside);
 }
 
 function addPoints(points) {
@@ -214,6 +241,10 @@ function addPoints(points) {
   levelUpAnimationPending =
     levelUpAnimationPending ||
     Math.floor(state.totalPoints / XP_RULES.levelThreshold) > previousLevel;
+}
+
+function removePoints(points) {
+  state.totalPoints = Math.max(0, state.totalPoints - Math.max(0, points));
 }
 
 function saveHabitName(event) {
@@ -231,11 +262,83 @@ function saveHabitName(event) {
   renderAll();
 }
 
-function editHabitName() {
-  elements.habitInput.value = state.habit.name;
-  elements.habitForm.hidden = false;
-  elements.habitEditButton.hidden = true;
-  elements.habitInput.focus();
+function openQuickAdd(type) {
+  const isMission = type === "mission";
+  const form = isMission ? elements.missionForm : elements.taskForm;
+  const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
+  const input = isMission ? elements.missionInput : elements.taskInput;
+  form.hidden = false;
+  button.hidden = true;
+  input.focus();
+}
+
+function closeQuickAdd(type) {
+  const isMission = type === "mission";
+  const form = isMission ? elements.missionForm : elements.taskForm;
+  const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
+  const input = isMission ? elements.missionInput : elements.taskInput;
+  form.hidden = true;
+  button.hidden = isMission && state.missions.length >= XP_RULES.missionMaxCount;
+  input.value = "";
+  input.blur();
+}
+
+function closeOtherMenus(event) {
+  if (!event.target.matches("details.action-menu") || !event.target.open) return;
+  document.querySelectorAll("details.action-menu[open]").forEach((menu) => {
+    if (menu !== event.target) menu.open = false;
+  });
+}
+
+function closeMenusFromOutside(event) {
+  if (event.target.closest("details.action-menu")) return;
+  document.querySelectorAll("details.action-menu[open]").forEach((menu) => {
+    menu.open = false;
+  });
+}
+
+function openEditDialog(type, id = null) {
+  const item = type === "habit"
+    ? state.habit
+    : state[type === "mission" ? "missions" : "tasks"].find((entry) => entry.id === id);
+  if (!item) return;
+  editContext = { type, id };
+  elements.editDialogTitle.textContent =
+    type === "habit" ? "習慣を編集" : type === "mission" ? "Missionを編集" : "Todoを編集";
+  elements.editInput.maxLength = type === "habit" ? 50 : type === "mission" ? 80 : 100;
+  elements.editInput.value = type === "habit" ? item.name : item.text;
+  document.querySelectorAll("details.action-menu[open]").forEach((menu) => { menu.open = false; });
+  elements.editDialog.showModal();
+  elements.editInput.focus();
+  elements.editInput.select();
+}
+
+function saveEditedItem(event) {
+  event.preventDefault();
+  const value = elements.editInput.value.trim();
+  if (!value || !editContext) return;
+  if (editContext.type === "habit") {
+    state.habit.name = value;
+  } else {
+    const collection = editContext.type === "mission" ? state.missions : state.tasks;
+    const item = collection.find((entry) => entry.id === editContext.id);
+    if (!item) return;
+    item.text = value;
+  }
+  saveState();
+  elements.editDialog.close();
+  renderAll();
+}
+
+function deleteHabit() {
+  if (state.habit.pointAwardDates.includes(getLocalDateString())) {
+    removePoints(XP_RULES.habit);
+  }
+  state.habit = { ...createInitialState().habit };
+  elements.habitMenu.open = false;
+  checkAndAwardAchievementBonus();
+  saveState();
+  renderAll();
 }
 
 function vibrateOnCompletion() {
@@ -248,6 +351,7 @@ function vibrateOnCompletion() {
 
 function toggleHabit() {
   const today = getLocalDateString();
+  const previousPoints = state.totalPoints;
   state.habit.completedToday = elements.habitCheckbox.checked;
 
   if (state.habit.completedToday) {
@@ -258,9 +362,18 @@ function toggleHabit() {
       state.habit.pointAwardDates.push(today);
       addPoints(XP_RULES.habit);
     }
+  } else {
+    const pointDateIndex = state.habit.pointAwardDates.indexOf(today);
+    if (pointDateIndex >= 0) {
+      state.habit.pointAwardDates.splice(pointDateIndex, 1);
+      removePoints(XP_RULES.habit);
+    }
   }
 
   checkAndAwardAchievementBonus();
+  if (state.habit.completedToday) {
+    queueXpAnimation("habit", null, state.totalPoints - previousPoints);
+  }
   saveState();
   renderAll();
 }
@@ -290,10 +403,15 @@ function addMission(event) {
     return;
   }
 
-  state.missions.push({ id: createId(), text, completed: false, pointAwarded: false });
-  elements.missionInput.value = "";
-  elements.missionInput.blur();
+  state.missions.push({
+    id: createId(),
+    text,
+    completed: false,
+    pointAwarded: false,
+    xpAwarded: 0
+  });
   elements.missionError.textContent = "";
+  closeQuickAdd("mission");
   saveState();
   renderAll();
   if (state.missions.length === XP_RULES.missionMaxCount) {
@@ -309,6 +427,7 @@ function toggleMission(id) {
   const mission = state.missions.find((item) => item.id === id);
   if (!mission) return;
 
+  const previousPoints = state.totalPoints;
   mission.completed = !mission.completed;
   if (mission.completed) {
     vibrateOnCompletion();
@@ -316,16 +435,32 @@ function toggleMission(id) {
       if (state.daily.missionXpCount < XP_RULES.missionMaxCount) {
         addPoints(XP_RULES.mission);
         state.daily.missionXpCount += 1;
+        mission.xpAwarded = XP_RULES.mission;
       }
       mission.pointAwarded = true;
     }
+  } else if (mission.pointAwarded) {
+    removePoints(mission.xpAwarded);
+    if (mission.xpAwarded > 0) {
+      state.daily.missionXpCount = Math.max(0, state.daily.missionXpCount - 1);
+    }
+    mission.pointAwarded = false;
+    mission.xpAwarded = 0;
   }
   checkAndAwardAchievementBonus();
+  if (mission.completed) {
+    queueXpAnimation("mission", id, state.totalPoints - previousPoints);
+  }
   saveState();
   renderAll();
 }
 
 function deleteMission(id) {
+  const mission = state.missions.find((item) => item.id === id);
+  if (mission?.xpAwarded > 0) {
+    removePoints(mission.xpAwarded);
+    state.daily.missionXpCount = Math.max(0, state.daily.missionXpCount - 1);
+  }
   state.missions = state.missions.filter((mission) => mission.id !== id);
   checkAndAwardAchievementBonus();
   saveState();
@@ -346,11 +481,11 @@ function addTask(event) {
     text,
     completed: false,
     pointAwarded: false,
+    xpAwarded: 0,
     completedDate: null
   });
-  elements.taskInput.value = "";
-  elements.taskInput.blur();
   elements.taskError.textContent = "";
+  closeQuickAdd("task");
   saveState();
   renderAll();
 }
@@ -359,6 +494,7 @@ function toggleTask(id) {
   const task = state.tasks.find((item) => item.id === id);
   if (!task) return;
 
+  const previousPoints = state.totalPoints;
   task.completed = !task.completed;
   if (task.completed) vibrateOnCompletion();
 
@@ -366,19 +502,40 @@ function toggleTask(id) {
     if (state.daily.todoXpCount < XP_RULES.todoMaxCount) {
       addPoints(XP_RULES.todo);
       state.daily.todoXpCount += 1;
+      task.xpAwarded = XP_RULES.todo;
     }
     task.pointAwarded = true;
     task.completedDate = getLocalDateString();
+  } else if (!task.completed && task.pointAwarded) {
+    removePoints(task.xpAwarded);
+    if (task.xpAwarded > 0) {
+      state.daily.todoXpCount = Math.max(0, state.daily.todoXpCount - 1);
+    }
+    task.pointAwarded = false;
+    task.xpAwarded = 0;
+    task.completedDate = null;
   }
 
+  if (task.completed) {
+    queueXpAnimation("task", id, state.totalPoints - previousPoints);
+  }
   saveState();
   renderAll();
 }
 
 function deleteTask(id) {
+  const task = state.tasks.find((item) => item.id === id);
+  if (task?.xpAwarded > 0) {
+    removePoints(task.xpAwarded);
+    state.daily.todoXpCount = Math.max(0, state.daily.todoXpCount - 1);
+  }
   state.tasks = state.tasks.filter((task) => task.id !== id);
   saveState();
   renderAll();
+}
+
+function queueXpAnimation(type, id, amount) {
+  pendingXpAnimation = amount > 0 ? { type, id, amount } : null;
 }
 
 function getAchievement() {
@@ -393,17 +550,21 @@ function getAchievement() {
 }
 
 function checkAndAwardAchievementBonus() {
-  const achievement = getAchievement();
-
-  if (
+  const isComplete = Boolean(
     state.habit.name &&
     state.habit.completedToday &&
     state.missions.length === XP_RULES.missionMaxCount &&
-    state.missions.every((mission) => mission.completed) &&
-    !state.daily.achievementBonusAwarded
-  ) {
+    state.missions.every((mission) => mission.completed)
+  );
+
+  if (isComplete && !state.daily.achievementBonusAwarded) {
     addPoints(XP_RULES.completionBonus);
     state.daily.achievementBonusAwarded = true;
+    state.daily.completionBonusXp = XP_RULES.completionBonus;
+  } else if (!isComplete && state.daily.achievementBonusAwarded) {
+    removePoints(state.daily.completionBonusXp);
+    state.daily.achievementBonusAwarded = false;
+    state.daily.completionBonusXp = 0;
   }
 }
 
@@ -430,6 +591,7 @@ function renderAll() {
   renderTasks();
   renderReflection();
   renderLevelUpAnimation();
+  renderXpAnimation();
 }
 
 function renderCurrentDate() {
@@ -485,13 +647,15 @@ function renderHabit() {
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
   elements.habitStreak.textContent = `連続 ${state.habit.streak}日`;
   elements.habitForm.hidden = hasHabit;
-  elements.habitEditButton.hidden = !hasHabit;
+  elements.habitMenu.hidden = !hasHabit;
 }
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
   elements.missionCount.textContent = `${state.missions.length} / ${XP_RULES.missionMaxCount}件`;
-  elements.missionForm.hidden = state.missions.length >= XP_RULES.missionMaxCount;
+  const isFull = state.missions.length >= XP_RULES.missionMaxCount;
+  if (isFull) elements.missionForm.hidden = true;
+  elements.missionOpenButton.hidden = isFull || !elements.missionForm.hidden;
 
   const sortedMissions = [...state.missions].sort(
     (first, second) => Number(first.completed) - Number(second.completed)
@@ -521,6 +685,7 @@ function renderTasks() {
 function createListItem(item, onToggle, onDelete) {
   const listItem = document.createElement("li");
   listItem.className = `item-row${item.completed ? " completed" : ""}`;
+  listItem.dataset.itemId = item.id;
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -532,14 +697,33 @@ function createListItem(item, onToggle, onDelete) {
   text.className = "item-text";
   text.textContent = item.text;
 
+  const menu = document.createElement("details");
+  menu.className = "action-menu item-action-menu";
+
+  const summary = document.createElement("summary");
+  summary.textContent = "•••";
+  summary.setAttribute("aria-label", `${item.text}の操作`);
+
+  const panel = document.createElement("div");
+  panel.className = "action-menu-panel";
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.textContent = "編集";
+  editButton.addEventListener("click", () => {
+    const type = onToggle === toggleMission ? "mission" : "task";
+    openEditDialog(type, item.id);
+  });
+
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
-  deleteButton.className = "delete-button";
+  deleteButton.className = "danger-action";
   deleteButton.textContent = "削除";
-  deleteButton.setAttribute("aria-label", `${item.text}を削除`);
   deleteButton.addEventListener("click", () => onDelete(item.id));
 
-  listItem.append(checkbox, text, deleteButton);
+  panel.append(editButton, deleteButton);
+  menu.append(summary, panel);
+  listItem.append(checkbox, text, menu);
   return listItem;
 }
 
@@ -570,6 +754,24 @@ function renderLevelUpAnimation() {
       elements.levelUpNotice.classList.remove("show");
     }, 1200);
   });
+}
+
+function renderXpAnimation() {
+  if (!pendingXpAnimation) return;
+  const { type, id, amount } = pendingXpAnimation;
+  pendingXpAnimation = null;
+  const target = type === "habit"
+    ? elements.habitCheckLabel
+    : document.querySelector(
+        `${type === "mission" ? "#missionList" : "#taskList"} [data-item-id="${CSS.escape(id)}"]`
+      );
+  if (!target) return;
+  const reward = document.createElement("span");
+  reward.className = "xp-reward";
+  reward.textContent = `+${amount}XP`;
+  target.appendChild(reward);
+  reward.addEventListener("animationend", () => reward.remove(), { once: true });
+  window.setTimeout(() => reward.remove(), 1200);
 }
 
 function updateSatisfactionLabel() {
