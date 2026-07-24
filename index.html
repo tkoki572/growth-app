@@ -19,7 +19,7 @@
       <div class="section-heading">
         <div>
           <h2 id="habitHeading">続けたい習慣</h2>
-          <p id="habitStreak" class="card-subtitle">連続 0日</p>
+          <p class="card-subtitle">毎日必ず続ける、たった一つの習慣</p>
         </div>
         <details id="habitMenu" class="action-menu" hidden>
           <summary aria-label="習慣の操作">•••</summary>
@@ -36,6 +36,7 @@
       <label id="habitCheckLabel" class="check-row habit-row empty-row">
         <input id="habitCheckbox" type="checkbox" disabled>
         <span id="habitName">習慣を登録してください</span>
+        <span id="habitStreak" class="streak-chip">連続 0日</span>
       </label>
     </section>
 
@@ -45,7 +46,7 @@
           <h2 id="missionHeading">今日のMission</h2>
           <p class="card-subtitle">今日、少し前に進むための3つ</p>
         </div>
-        <span id="missionCount" class="count-text">0 / 3件</span>
+        <span id="missionCount" class="count-text">0 / 3 完了</span>
       </div>
       <button id="missionOpenButton" class="add-trigger" type="button">＋ 追加</button>
       <form id="missionForm" class="quick-add-form" hidden>
@@ -62,7 +63,7 @@
           <h2 id="taskHeading">Todo</h2>
           <p class="card-subtitle">忘れないためのメモ</p>
         </div>
-        <span id="taskCount" class="count-text">0件</span>
+        <span id="taskCount" class="count-text">残り0件</span>
       </div>
       <button id="taskOpenButton" class="add-trigger" type="button">＋ 追加</button>
       <form id="taskForm" class="quick-add-form" hidden>
@@ -98,10 +99,27 @@
         <div id="levelProgress" class="progress-bar level-bar"></div>
       </div>
       <p id="totalPointText" class="total-xp">累計 0XP</p>
+      <details class="xp-details">
+        <summary>XP獲得ルール</summary>
+        <ul>
+          <li><span>🌱 習慣を完了</span><strong>+5XP</strong></li>
+          <li><span>🎯 Missionを1つ完了（最大3件）</span><strong>+2XP</strong></li>
+          <li><span>📝 Todoを1つ完了（最大5件）</span><strong>+1XP</strong></li>
+          <li><span>🌙 今日の振り返りを保存</span><strong>+2XP</strong></li>
+          <li><span>🎉 コンプリートボーナス</span><strong>+2XP</strong></li>
+        </ul>
+        <p>最大20XP / 日</p>
+      </details>
     </section>
 
     <section id="reflectionSection" class="card" aria-labelledby="reflectionHeading">
-      <h2 id="reflectionHeading">今日の振り返り</h2>
+      <div class="section-heading">
+        <div>
+          <h2 id="reflectionHeading">今日の振り返り</h2>
+          <p class="card-subtitle">一日の締めくくり</p>
+        </div>
+        <button id="reflectionEditButton" class="icon-button" type="button" aria-label="今日の振り返りを編集" title="振り返りを編集" hidden>✎</button>
+      </div>
       <form id="reflectionForm">
         <div class="range-heading">
           <label for="satisfactionRange">今日の充実度</label>
@@ -113,6 +131,7 @@
         <button class="save-button" type="submit">今日の振り返りを保存</button>
         <p id="reflectionMessage" class="save-message" role="status"></p>
       </form>
+      <p id="reflectionCompleteMessage" class="reflection-complete-message" hidden>🌙 今日もお疲れさまでした。<br>また明日、少し前へ。</p>
     </section>
   </main>
 

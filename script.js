@@ -6,7 +6,8 @@ const XP_RULES = Object.freeze({
   missionMaxCount: 3,
   todo: 1,
   todoMaxCount: 5,
-  completionBonus: 5,
+  reflection: 2,
+  completionBonus: 2,
   levelThreshold: 40
 });
 let levelUpAnimationPending = false;
@@ -14,23 +15,29 @@ let missionCompleteMessageTimer = null;
 let pendingXpAnimation = null;
 let editContext = null;
 
-function getLocalDateString(date = new Date()) {
+function formatLocalDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
+function getLocalDateString(date = new Date()) {
+  const appDate = new Date(date);
+  appDate.setHours(appDate.getHours() - 3);
+  return formatLocalDate(appDate);
+}
+
 function getPreviousDateString(dateString) {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   date.setDate(date.getDate() - 1);
-  return getLocalDateString(date);
+  return formatLocalDate(date);
 }
 
 function createInitialState() {
   return {
-    version: 4,
+    version: 5,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -61,7 +68,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 4,
+    version: 5,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -91,7 +98,12 @@ function mergeState(savedState) {
       : [],
     reflections:
       savedState?.reflections && typeof savedState.reflections === "object"
-        ? savedState.reflections
+        ? Object.fromEntries(
+            Object.entries(savedState.reflections).map(([date, reflection]) => [
+              date,
+              { ...reflection, xpAwarded: Boolean(reflection?.xpAwarded) }
+            ])
+          )
         : {}
   };
 }
@@ -181,6 +193,8 @@ const elements = {
   satisfactionValue: document.getElementById("satisfactionValue"),
   goodThingInput: document.getElementById("goodThingInput"),
   reflectionMessage: document.getElementById("reflectionMessage"),
+  reflectionEditButton: document.getElementById("reflectionEditButton"),
+  reflectionCompleteMessage: document.getElementById("reflectionCompleteMessage"),
   editDialog: document.getElementById("editDialog"),
   editForm: document.getElementById("editForm"),
   editDialogTitle: document.getElementById("editDialogTitle"),
@@ -228,6 +242,7 @@ function setUpEventListeners() {
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
   elements.taskForm.addEventListener("submit", addTask);
   elements.reflectionForm.addEventListener("submit", saveReflection);
+  elements.reflectionEditButton.addEventListener("click", editReflection);
   elements.satisfactionRange.addEventListener("input", updateSatisfactionLabel);
   elements.editForm.addEventListener("submit", saveEditedItem);
   elements.editCancelButton.addEventListener("click", () => elements.editDialog.close());
@@ -571,15 +586,30 @@ function checkAndAwardAchievementBonus() {
 function saveReflection(event) {
   event.preventDefault();
   const today = getLocalDateString();
+  const existingReflection = state.reflections[today];
+  const isFirstXpAward = !existingReflection?.xpAwarded;
 
   state.reflections[today] = {
     date: today,
     satisfaction: Number(elements.satisfactionRange.value),
-    goodThing: elements.goodThingInput.value.trim()
+    goodThing: elements.goodThingInput.value.trim(),
+    xpAwarded: true
   };
 
+  if (isFirstXpAward) {
+    addPoints(XP_RULES.reflection);
+    queueXpAnimation("reflection", null, XP_RULES.reflection);
+  }
+  elements.goodThingInput.blur();
   saveState();
-  elements.reflectionMessage.textContent = "今日の振り返りを保存しました。";
+  renderAll();
+}
+
+function editReflection() {
+  elements.reflectionForm.hidden = false;
+  elements.reflectionEditButton.hidden = true;
+  elements.reflectionCompleteMessage.hidden = true;
+  elements.goodThingInput.focus();
 }
 
 function renderAll() {
@@ -645,6 +675,10 @@ function renderHabit() {
   elements.habitCheckbox.disabled = !hasHabit;
   elements.habitCheckbox.checked = hasHabit && state.habit.completedToday;
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
+  elements.habitCheckLabel.classList.toggle(
+    "completed",
+    hasHabit && state.habit.completedToday
+  );
   elements.habitStreak.textContent = `連続 ${state.habit.streak}日`;
   elements.habitForm.hidden = hasHabit;
   elements.habitMenu.hidden = !hasHabit;
@@ -652,7 +686,8 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
-  elements.missionCount.textContent = `${state.missions.length} / ${XP_RULES.missionMaxCount}件`;
+  const completedCount = state.missions.filter((mission) => mission.completed).length;
+  elements.missionCount.textContent = `${completedCount} / ${XP_RULES.missionMaxCount} 完了`;
   const isFull = state.missions.length >= XP_RULES.missionMaxCount;
   if (isFull) elements.missionForm.hidden = true;
   elements.missionOpenButton.hidden = isFull || !elements.missionForm.hidden;
@@ -679,7 +714,7 @@ function renderTasks() {
   });
 
   const incompleteCount = state.tasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = `${incompleteCount}件`;
+  elements.taskCount.textContent = `残り${incompleteCount}件`;
 }
 
 function createListItem(item, onToggle, onDelete) {
@@ -729,13 +764,20 @@ function createListItem(item, onToggle, onDelete) {
 
 function renderReflection() {
   renderCurrentDateAndReflectionVisibility();
-  if (elements.reflectionSection.hidden) return;
-
   const todayReflection = state.reflections[getLocalDateString()];
 
   if (todayReflection) {
     elements.satisfactionRange.value = String(todayReflection.satisfaction);
     elements.goodThingInput.value = todayReflection.goodThing;
+    elements.reflectionForm.hidden = true;
+    elements.reflectionEditButton.hidden = false;
+    elements.reflectionCompleteMessage.hidden = false;
+  } else {
+    elements.satisfactionRange.value = "3";
+    elements.goodThingInput.value = "";
+    elements.reflectionForm.hidden = false;
+    elements.reflectionEditButton.hidden = true;
+    elements.reflectionCompleteMessage.hidden = true;
   }
 
   updateSatisfactionLabel();
@@ -762,7 +804,9 @@ function renderXpAnimation() {
   pendingXpAnimation = null;
   const target = type === "habit"
     ? elements.habitCheckLabel
-    : document.querySelector(
+    : type === "reflection"
+      ? elements.reflectionSection
+      : document.querySelector(
         `${type === "mission" ? "#missionList" : "#taskList"} [data-item-id="${CSS.escape(id)}"]`
       );
   if (!target) return;

@@ -56,6 +56,7 @@ h1 { margin: 0; font-size: clamp(25px, 7vw, 34px); line-height: 1.3; }
 .app-header > p:last-child { margin: 8px 0 0; color: var(--color-muted); }
 
 .card {
+  position: relative;
   margin-bottom: 14px;
   padding: var(--space-card);
   background: var(--color-surface);
@@ -147,6 +148,16 @@ input[type="text"]:focus, textarea:focus {
 }
 .habit-row { min-height: 64px; margin-top: 15px; padding: 12px; }
 .habit-row #habitName { font-size: 18px; font-weight: 700; line-height: 1.45; }
+.streak-chip {
+  flex: 0 0 auto !important;
+  padding: 4px 8px;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .empty-row { color: var(--color-muted); }
 
 input[type="checkbox"] {
@@ -161,7 +172,20 @@ input[type="checkbox"] {
   overflow-wrap: anywhere;
 }
 .item-list { margin: 10px 0 0; padding: 0; list-style: none; }
-.item-row.completed .item-text { color: #989c96; text-decoration: line-through; }
+.check-row.completed,
+.item-row.completed {
+  background: #edf3ef;
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+.check-row.completed #habitName,
+.item-row.completed .item-text {
+  color: #8b918a;
+  text-decoration: line-through;
+}
+.check-row.completed input[type="checkbox"],
+.item-row.completed input[type="checkbox"] {
+  accent-color: #2f8a67;
+}
 
 .action-menu { position: relative; flex: 0 0 auto; }
 .action-menu summary {
@@ -204,6 +228,19 @@ input[type="checkbox"] {
 .action-menu-panel button:hover { background: var(--color-soft); }
 .action-menu-panel .danger-action { color: var(--color-danger); }
 
+.icon-button {
+  display: inline-grid;
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  place-items: center;
+  color: var(--color-muted);
+  background: transparent;
+  border-radius: 50%;
+  font-size: 18px;
+}
+.icon-button:hover { color: var(--color-text); background: var(--color-soft); }
+
 .error-message {
   margin: 6px 0 0;
   color: var(--color-danger);
@@ -237,6 +274,20 @@ input[type="checkbox"] {
 .level-bar { background: var(--color-progress); }
 .progress-label { margin: 20px 0 8px; color: var(--color-muted); font-size: 12px; }
 .total-xp { margin: 10px 0 0; }
+.xp-details {
+  margin-top: 16px;
+  padding-top: 13px;
+  border-top: 1px solid var(--color-border);
+}
+.xp-details summary {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.xp-details ul { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+.xp-details li { display: flex; justify-content: space-between; gap: 12px; color: var(--color-muted); font-size: 12px; }
+.xp-details strong { flex: 0 0 auto; color: var(--color-text); }
+.xp-details p { margin: 11px 0 0; color: var(--color-primary); font-size: 12px; font-weight: 800; text-align: right; }
 
 .xp-reward {
   position: absolute;
@@ -303,6 +354,14 @@ input[type="checkbox"] {
 textarea { resize: vertical; }
 .save-button { width: 100%; margin-top: 12px; }
 .save-message { min-height: 20px; margin: 8px 0 0; color: var(--color-muted); font-size: 13px; text-align: center; }
+.reflection-complete-message {
+  margin: 20px 0 4px;
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.8;
+  text-align: center;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .xp-reward, .level-up-notice.show, .card.level-up { animation: none; }
@@ -316,5 +375,5 @@ textarea { resize: vertical; }
   .progress-summary { align-items: flex-start; flex-direction: column; gap: 8px; }
   .progress-detail { text-align: left; }
   .progress-label { align-items: flex-start; flex-direction: column; gap: 3px; }
-  .action-menu-panel { position: fixed; top: auto; right: 12px; bottom: 12px; left: 12px; width: auto; }
+  .streak-chip { font-size: 11px; }
 }
