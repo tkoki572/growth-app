@@ -15,11 +15,10 @@
       <p>毎日3分、小さな達成を積み重ねよう。</p>
     </header>
 
-    <section class="card habit-card" aria-labelledby="habitHeading">
+    <section id="habitCard" class="card habit-card" aria-labelledby="habitHeading">
       <div class="section-heading">
         <div>
-          <h2 id="habitHeading">続けたい習慣</h2>
-          <p class="card-subtitle">毎日必ず続ける、たった一つの習慣</p>
+          <h2 id="habitHeading"><button id="habitCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="habitCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>続けたい習慣</button></h2>
         </div>
         <details id="habitMenu" class="action-menu" hidden>
           <summary aria-label="習慣の操作">•••</summary>
@@ -29,32 +28,37 @@
           </div>
         </details>
       </div>
-      <form id="habitForm" class="input-row">
-        <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
-        <button type="submit">登録</button>
-      </form>
-      <label id="habitCheckLabel" class="check-row habit-row empty-row">
-        <input id="habitCheckbox" type="checkbox" disabled>
-        <span id="habitName">習慣を登録してください</span>
-        <span id="habitStreak" class="streak-chip">連続 0日</span>
-      </label>
+      <div id="habitCardBody" class="collapsible-content">
+        <p class="card-subtitle">毎日必ず続ける、たった一つの習慣</p>
+        <form id="habitForm" class="input-row">
+          <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
+          <button type="submit">登録</button>
+        </form>
+        <label id="habitCheckLabel" class="check-row habit-row empty-row">
+          <input id="habitCheckbox" type="checkbox" disabled>
+          <span id="habitName">習慣を登録してください</span>
+          <span id="habitStreak" class="streak-chip">連続 0日</span>
+        </label>
+      </div>
     </section>
 
-    <section class="card" aria-labelledby="missionHeading">
+    <section id="missionCard" class="card" aria-labelledby="missionHeading">
       <div class="section-heading">
         <div>
-          <h2 id="missionHeading">今日のMission</h2>
-          <p class="card-subtitle">今日、少し前に進むための3つ</p>
+          <h2 id="missionHeading"><button id="missionCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="missionCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>今日のMission</button></h2>
         </div>
         <span id="missionCount" class="count-text">0 / 3 完了</span>
       </div>
-      <button id="missionOpenButton" class="add-trigger" type="button">＋ 追加</button>
-      <form id="missionForm" class="quick-add-form" hidden>
-        <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力してEnter" aria-label="Mission" enterkeyhint="done" autocomplete="off">
-      </form>
-      <p id="missionError" class="error-message" role="alert"></p>
-      <p id="missionCompleteMessage" class="mission-complete-message" role="status"></p>
-      <ul id="missionList" class="item-list"></ul>
+      <div id="missionCardBody" class="collapsible-content">
+        <p class="card-subtitle">今日、少し前に進むための3つ</p>
+        <button id="missionOpenButton" class="add-trigger" type="button">＋ 追加</button>
+        <form id="missionForm" class="quick-add-form" hidden>
+          <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力してEnter" aria-label="Mission" enterkeyhint="done" autocomplete="off">
+        </form>
+        <p id="missionError" class="error-message" role="alert"></p>
+        <p id="missionCompleteMessage" class="mission-complete-message" role="status"></p>
+        <ul id="missionList" class="item-list"></ul>
+      </div>
     </section>
 
     <section class="card" aria-labelledby="taskHeading">
@@ -63,7 +67,7 @@
           <h2 id="taskHeading">Todo</h2>
           <p class="card-subtitle">忘れないためのメモ</p>
         </div>
-        <span id="taskCount" class="count-text">残り0件</span>
+        <span id="taskCount" class="count-text">未完了：0件</span>
       </div>
       <button id="taskOpenButton" class="add-trigger" type="button">＋ 追加</button>
       <form id="taskForm" class="quick-add-form" hidden>
@@ -133,6 +137,13 @@
       </form>
       <p id="reflectionCompleteMessage" class="reflection-complete-message" hidden>🌙 今日もお疲れさまでした。<br>また明日、少し前へ。</p>
     </section>
+
+    <section class="future-todos" aria-labelledby="futureTodoHeading">
+      <details id="futureTodoDetails">
+        <summary><span id="futureTodoHeading">あとで表示</span> <span id="futureTodoCount">0件</span></summary>
+        <div id="futureTodoGroups" class="future-todo-groups"></div>
+      </details>
+    </section>
   </main>
 
   <dialog id="editDialog" class="edit-dialog">
@@ -144,6 +155,25 @@
         <button type="submit">保存</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="scheduleDialog" class="edit-dialog schedule-dialog">
+    <div class="dialog-content">
+      <h2 id="scheduleDialogTitle">表示日を選ぶ</h2>
+      <div class="schedule-options">
+        <button type="button" data-schedule-days="0">今日から</button>
+        <button type="button" data-schedule-days="1">明日から</button>
+        <button type="button" data-schedule-days="7">7日後から</button>
+      </div>
+      <form id="scheduleDateForm">
+        <label for="scheduleDateInput">日付を選ぶ</label>
+        <input id="scheduleDateInput" type="date" required>
+        <div class="dialog-actions">
+          <button id="scheduleCancelButton" class="secondary-button" type="button">キャンセル</button>
+          <button type="submit">決定</button>
+        </div>
+      </form>
+    </div>
   </dialog>
 
   <div id="levelUpNotice" class="level-up-notice" role="status" aria-live="polite">LEVEL UP!</div>

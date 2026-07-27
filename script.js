@@ -14,6 +14,7 @@ let levelUpAnimationPending = false;
 let missionCompleteMessageTimer = null;
 let pendingXpAnimation = null;
 let editContext = null;
+let scheduleTaskId = null;
 
 function formatLocalDate(date) {
   const year = date.getFullYear();
@@ -35,9 +36,21 @@ function getPreviousDateString(dateString) {
   return formatLocalDate(date);
 }
 
+function addDaysToDateString(dateString, days) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + days);
+  return formatLocalDate(date);
+}
+
+function formatDisplayDate(dateString) {
+  const [, month, day] = dateString.split("-").map(Number);
+  return `${month}月${day}日`;
+}
+
 function createInitialState() {
   return {
-    version: 5,
+    version: 6,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -68,7 +81,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 5,
+    version: 6,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -94,7 +107,11 @@ function mergeState(savedState) {
         }))
       : [],
     tasks: Array.isArray(savedState?.tasks)
-      ? savedState.tasks.map((task) => ({ ...task, xpAwarded: Number(task.xpAwarded) || 0 }))
+      ? savedState.tasks.map((task) => ({
+          ...task,
+          xpAwarded: Number(task.xpAwarded) || 0,
+          visibleFrom: typeof task.visibleFrom === "string" ? task.visibleFrom : null
+        }))
       : [],
     reflections:
       savedState?.reflections && typeof savedState.reflections === "object"
@@ -132,6 +149,7 @@ function loadState() {
           completed: Boolean(todo.completed),
           pointAwarded: Boolean(todo.completed),
           xpAwarded: 0,
+          visibleFrom: null,
           completedDate: null
         }));
     }
@@ -152,6 +170,8 @@ function createId() {
 
 let state = loadState();
 handleDateChange();
+let habitCardExpanded = !state.habit.completedToday;
+let missionCardExpanded = !isMissionComplete();
 
 const elements = {
   currentDate: document.getElementById("currentDate"),
@@ -166,6 +186,9 @@ const elements = {
   achievementProgress: document.getElementById("achievementProgress"),
   achievementDetail: document.getElementById("achievementDetail"),
   habitForm: document.getElementById("habitForm"),
+  habitCard: document.getElementById("habitCard"),
+  habitCardBody: document.getElementById("habitCardBody"),
+  habitCollapseButton: document.getElementById("habitCollapseButton"),
   habitMenu: document.getElementById("habitMenu"),
   habitEditButton: document.getElementById("habitEditButton"),
   habitDeleteButton: document.getElementById("habitDeleteButton"),
@@ -175,6 +198,9 @@ const elements = {
   habitName: document.getElementById("habitName"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
+  missionCard: document.getElementById("missionCard"),
+  missionCardBody: document.getElementById("missionCardBody"),
+  missionCollapseButton: document.getElementById("missionCollapseButton"),
   missionOpenButton: document.getElementById("missionOpenButton"),
   missionInput: document.getElementById("missionInput"),
   missionError: document.getElementById("missionError"),
@@ -187,6 +213,9 @@ const elements = {
   taskError: document.getElementById("taskError"),
   taskList: document.getElementById("taskList"),
   taskCount: document.getElementById("taskCount"),
+  futureTodoDetails: document.getElementById("futureTodoDetails"),
+  futureTodoCount: document.getElementById("futureTodoCount"),
+  futureTodoGroups: document.getElementById("futureTodoGroups"),
   reflectionForm: document.getElementById("reflectionForm"),
   reflectionSection: document.getElementById("reflectionSection"),
   satisfactionRange: document.getElementById("satisfactionRange"),
@@ -199,7 +228,12 @@ const elements = {
   editForm: document.getElementById("editForm"),
   editDialogTitle: document.getElementById("editDialogTitle"),
   editInput: document.getElementById("editInput"),
-  editCancelButton: document.getElementById("editCancelButton")
+  editCancelButton: document.getElementById("editCancelButton"),
+  scheduleDialog: document.getElementById("scheduleDialog"),
+  scheduleDialogTitle: document.getElementById("scheduleDialogTitle"),
+  scheduleDateForm: document.getElementById("scheduleDateForm"),
+  scheduleDateInput: document.getElementById("scheduleDateInput"),
+  scheduleCancelButton: document.getElementById("scheduleCancelButton")
 };
 
 setUpEventListeners();
@@ -207,14 +241,30 @@ renderAll();
 window.setInterval(() => {
   const beforeDate = state.lastUsedDate;
   handleDateChange();
-  if (state.lastUsedDate !== beforeDate) renderAll();
+  if (state.lastUsedDate !== beforeDate) {
+    habitCardExpanded = true;
+    missionCardExpanded = true;
+    renderAll();
+  }
   else renderCurrentDateAndReflectionVisibility();
 }, 60000);
 
 function handleDateChange() {
   const today = getLocalDateString();
+  const dueTasks = state.tasks.filter(
+    (task) => task.visibleFrom && task.visibleFrom <= today
+  );
+
+  if (dueTasks.length > 0) {
+    const futureTaskIds = new Set(dueTasks.map((task) => task.id));
+    state.tasks = [
+      ...state.tasks.filter((task) => !futureTaskIds.has(task.id)),
+      ...dueTasks.map((task) => ({ ...task, visibleFrom: null }))
+    ];
+  }
 
   if (state.lastUsedDate === today && state.daily.date === today) {
+    if (dueTasks.length > 0) saveState();
     return;
   }
 
@@ -233,6 +283,8 @@ function handleDateChange() {
 }
 
 function setUpEventListeners() {
+  elements.habitCollapseButton.addEventListener("click", () => toggleCard("habit"));
+  elements.missionCollapseButton.addEventListener("click", () => toggleCard("mission"));
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
   elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
@@ -246,8 +298,33 @@ function setUpEventListeners() {
   elements.satisfactionRange.addEventListener("input", updateSatisfactionLabel);
   elements.editForm.addEventListener("submit", saveEditedItem);
   elements.editCancelButton.addEventListener("click", () => elements.editDialog.close());
+  elements.scheduleDialog.querySelectorAll("[data-schedule-days]").forEach((button) => {
+    button.addEventListener("click", () => scheduleTaskByDays(Number(button.dataset.scheduleDays)));
+  });
+  elements.scheduleDateForm.addEventListener("submit", scheduleTaskByDate);
+  elements.scheduleCancelButton.addEventListener("click", () => elements.scheduleDialog.close());
   document.addEventListener("toggle", closeOtherMenus, true);
   document.addEventListener("click", closeMenusFromOutside);
+}
+
+function isMissionComplete() {
+  return state.missions.length === XP_RULES.missionMaxCount &&
+    state.missions.every((mission) => mission.completed);
+}
+
+function toggleCard(type) {
+  if (type === "habit") habitCardExpanded = !habitCardExpanded;
+  else missionCardExpanded = !missionCardExpanded;
+  renderCollapsibleCards();
+}
+
+function renderCollapsibleCards() {
+  elements.habitCardBody.hidden = !habitCardExpanded;
+  elements.habitCollapseButton.setAttribute("aria-expanded", String(habitCardExpanded));
+  elements.habitCard.classList.toggle("collapsed", !habitCardExpanded);
+  elements.missionCardBody.hidden = !missionCardExpanded;
+  elements.missionCollapseButton.setAttribute("aria-expanded", String(missionCardExpanded));
+  elements.missionCard.classList.toggle("collapsed", !missionCardExpanded);
 }
 
 function addPoints(points) {
@@ -345,11 +422,67 @@ function saveEditedItem(event) {
   renderAll();
 }
 
+function openScheduleDialog(id) {
+  const task = state.tasks.find((item) => item.id === id);
+  if (!task) return;
+  scheduleTaskId = id;
+  elements.scheduleDialogTitle.textContent = task.visibleFrom
+    ? "表示日を変更"
+    : "あとで表示";
+  const today = getLocalDateString();
+  elements.scheduleDateInput.min = today;
+  elements.scheduleDateInput.value = task.visibleFrom || today;
+  document.querySelectorAll("details.action-menu[open]").forEach((menu) => { menu.open = false; });
+  elements.scheduleDialog.showModal();
+}
+
+function scheduleTaskByDays(days) {
+  const today = getLocalDateString();
+  applyTaskSchedule(days === 0 ? null : addDaysToDateString(today, days));
+}
+
+function scheduleTaskByDate(event) {
+  event.preventDefault();
+  const today = getLocalDateString();
+  const selectedDate = elements.scheduleDateInput.value;
+  if (!selectedDate) return;
+  applyTaskSchedule(selectedDate <= today ? null : selectedDate);
+}
+
+function applyTaskSchedule(visibleFrom) {
+  const taskIndex = state.tasks.findIndex((item) => item.id === scheduleTaskId);
+  if (taskIndex < 0) return;
+  const task = state.tasks[taskIndex];
+
+  if (task.completed) {
+    removePoints(task.xpAwarded);
+    if (task.xpAwarded > 0) {
+      state.daily.todoXpCount = Math.max(0, state.daily.todoXpCount - 1);
+    }
+    task.completed = false;
+    task.pointAwarded = false;
+    task.xpAwarded = 0;
+    task.completedDate = null;
+  }
+
+  task.visibleFrom = visibleFrom;
+  state.tasks.splice(taskIndex, 1);
+  state.tasks.push(task);
+  elements.scheduleDialog.close();
+  saveState();
+  renderAll();
+}
+
+function isFutureTask(task, today = getLocalDateString()) {
+  return Boolean(task.visibleFrom && task.visibleFrom > today);
+}
+
 function deleteHabit() {
   if (state.habit.pointAwardDates.includes(getLocalDateString())) {
     removePoints(XP_RULES.habit);
   }
   state.habit = { ...createInitialState().habit };
+  habitCardExpanded = true;
   elements.habitMenu.open = false;
   checkAndAwardAchievementBonus();
   saveState();
@@ -389,6 +522,7 @@ function toggleHabit() {
   if (state.habit.completedToday) {
     queueXpAnimation("habit", null, state.totalPoints - previousPoints);
   }
+  habitCardExpanded = !state.habit.completedToday;
   saveState();
   renderAll();
 }
@@ -466,6 +600,7 @@ function toggleMission(id) {
   if (mission.completed) {
     queueXpAnimation("mission", id, state.totalPoints - previousPoints);
   }
+  missionCardExpanded = !isMissionComplete();
   saveState();
   renderAll();
 }
@@ -477,6 +612,7 @@ function deleteMission(id) {
     state.daily.missionXpCount = Math.max(0, state.daily.missionXpCount - 1);
   }
   state.missions = state.missions.filter((mission) => mission.id !== id);
+  missionCardExpanded = true;
   checkAndAwardAchievementBonus();
   saveState();
   renderAll();
@@ -497,7 +633,8 @@ function addTask(event) {
     completed: false,
     pointAwarded: false,
     xpAwarded: 0,
-    completedDate: null
+    completedDate: null,
+    visibleFrom: null
   });
   elements.taskError.textContent = "";
   closeQuickAdd("task");
@@ -619,7 +756,9 @@ function renderAll() {
   renderHabit();
   renderMissions();
   renderTasks();
+  renderFutureTasks();
   renderReflection();
+  renderCollapsibleCards();
   renderLevelUpAnimation();
   renderXpAnimation();
 }
@@ -705,7 +844,8 @@ function renderMissions() {
 
 function renderTasks() {
   elements.taskList.innerHTML = "";
-  const sortedTasks = [...state.tasks].sort(
+  const todayTasks = state.tasks.filter((task) => !isFutureTask(task));
+  const sortedTasks = [...todayTasks].sort(
     (first, second) => Number(first.completed) - Number(second.completed)
   );
 
@@ -713,8 +853,42 @@ function renderTasks() {
     elements.taskList.appendChild(createListItem(task, toggleTask, deleteTask));
   });
 
-  const incompleteCount = state.tasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = `残り${incompleteCount}件`;
+  const incompleteCount = todayTasks.filter((task) => !task.completed).length;
+  elements.taskCount.textContent = `未完了：${incompleteCount}件`;
+}
+
+function renderFutureTasks() {
+  const futureTasks = state.tasks
+    .filter((task) => isFutureTask(task))
+    .sort((first, second) => first.visibleFrom.localeCompare(second.visibleFrom));
+  elements.futureTodoCount.textContent = `${futureTasks.length}件`;
+  elements.futureTodoGroups.innerHTML = "";
+
+  if (futureTasks.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "future-empty";
+    empty.textContent = "あとで表示するTodoはありません";
+    elements.futureTodoGroups.appendChild(empty);
+    return;
+  }
+
+  const groups = new Map();
+  futureTasks.forEach((task) => {
+    if (!groups.has(task.visibleFrom)) groups.set(task.visibleFrom, []);
+    groups.get(task.visibleFrom).push(task);
+  });
+
+  groups.forEach((tasks, date) => {
+    const group = document.createElement("section");
+    group.className = "future-date-group";
+    const heading = document.createElement("h3");
+    heading.textContent = formatDisplayDate(date);
+    const list = document.createElement("ul");
+    list.className = "future-list";
+    tasks.forEach((task) => list.appendChild(createFutureListItem(task)));
+    group.append(heading, list);
+    elements.futureTodoGroups.appendChild(group);
+  });
 }
 
 function createListItem(item, onToggle, onDelete) {
@@ -750,15 +924,61 @@ function createListItem(item, onToggle, onDelete) {
     openEditDialog(type, item.id);
   });
 
+  if (onToggle === toggleTask) {
+    const scheduleButton = document.createElement("button");
+    scheduleButton.type = "button";
+    scheduleButton.textContent = "あとで表示";
+    scheduleButton.addEventListener("click", () => openScheduleDialog(item.id));
+    panel.appendChild(scheduleButton);
+  }
+
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "danger-action";
   deleteButton.textContent = "削除";
   deleteButton.addEventListener("click", () => onDelete(item.id));
 
-  panel.append(editButton, deleteButton);
+  panel.prepend(editButton);
+  panel.appendChild(deleteButton);
   menu.append(summary, panel);
   listItem.append(checkbox, text, menu);
+  return listItem;
+}
+
+function createFutureListItem(task) {
+  const listItem = document.createElement("li");
+  listItem.className = "future-item";
+  listItem.dataset.itemId = task.id;
+
+  const text = document.createElement("span");
+  text.className = "item-text";
+  text.textContent = task.text;
+
+  const menu = document.createElement("details");
+  menu.className = "action-menu item-action-menu";
+  const summary = document.createElement("summary");
+  summary.textContent = "•••";
+  summary.setAttribute("aria-label", `${task.text}の操作`);
+  const panel = document.createElement("div");
+  panel.className = "action-menu-panel";
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.textContent = "編集";
+  editButton.addEventListener("click", () => openEditDialog("task", task.id));
+  const scheduleButton = document.createElement("button");
+  scheduleButton.type = "button";
+  scheduleButton.textContent = "表示日の変更";
+  scheduleButton.addEventListener("click", () => openScheduleDialog(task.id));
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "danger-action";
+  deleteButton.textContent = "削除";
+  deleteButton.addEventListener("click", () => deleteTask(task.id));
+
+  panel.append(editButton, scheduleButton, deleteButton);
+  menu.append(summary, panel);
+  listItem.append(text, menu);
   return listItem;
 }
 
@@ -803,9 +1023,11 @@ function renderXpAnimation() {
   const { type, id, amount } = pendingXpAnimation;
   pendingXpAnimation = null;
   const target = type === "habit"
-    ? elements.habitCheckLabel
+    ? (habitCardExpanded ? elements.habitCheckLabel : elements.habitCard)
     : type === "reflection"
       ? elements.reflectionSection
+      : type === "mission" && !missionCardExpanded
+        ? elements.missionCard
       : document.querySelector(
         `${type === "mission" ? "#missionList" : "#taskList"} [data-item-id="${CSS.escape(id)}"]`
       );
