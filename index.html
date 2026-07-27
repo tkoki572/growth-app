@@ -19,6 +19,7 @@
       <div class="section-heading">
         <div>
           <h2 id="habitHeading"><button id="habitCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="habitCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>続けたい習慣</button></h2>
+          <p class="collapsed-subtitle">毎日必ず続ける、たった一つの習慣</p>
         </div>
         <details id="habitMenu" class="action-menu" hidden>
           <summary aria-label="習慣の操作">•••</summary>
@@ -46,6 +47,7 @@
       <div class="section-heading">
         <div>
           <h2 id="missionHeading"><button id="missionCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="missionCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>今日のMission</button></h2>
+          <p class="collapsed-subtitle">今日少し前へ進むこと</p>
         </div>
         <span id="missionCount" class="count-text">0 / 3 完了</span>
       </div>
@@ -61,7 +63,7 @@
       </div>
     </section>
 
-    <section class="card" aria-labelledby="taskHeading">
+    <section class="card todo-card" aria-labelledby="taskHeading">
       <div class="section-heading">
         <div>
           <h2 id="taskHeading">Todo</h2>
@@ -75,6 +77,12 @@
       </form>
       <p id="taskError" class="error-message" role="alert"></p>
       <ul id="taskList" class="item-list"></ul>
+      <section class="future-todos" aria-labelledby="futureTodoHeading">
+        <details id="futureTodoDetails">
+          <summary><span id="futureTodoHeading">あとで表示</span> <span id="futureTodoCount">0件</span></summary>
+          <div id="futureTodoGroups" class="future-todo-groups"></div>
+        </details>
+      </section>
     </section>
 
     <section id="progressCard" class="card progress-card" aria-labelledby="progressHeading">
@@ -116,7 +124,7 @@
       </details>
     </section>
 
-    <section id="reflectionSection" class="card" aria-labelledby="reflectionHeading">
+    <section id="reflectionSection" class="card reflection-card" aria-labelledby="reflectionHeading">
       <div class="section-heading">
         <div>
           <h2 id="reflectionHeading">今日の振り返り</h2>
@@ -138,12 +146,6 @@
       <p id="reflectionCompleteMessage" class="reflection-complete-message" hidden>🌙 今日もお疲れさまでした。<br>また明日、少し前へ。</p>
     </section>
 
-    <section class="future-todos" aria-labelledby="futureTodoHeading">
-      <details id="futureTodoDetails">
-        <summary><span id="futureTodoHeading">あとで表示</span> <span id="futureTodoCount">0件</span></summary>
-        <div id="futureTodoGroups" class="future-todo-groups"></div>
-      </details>
-    </section>
   </main>
 
   <dialog id="editDialog" class="edit-dialog">

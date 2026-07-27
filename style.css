@@ -89,6 +89,23 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
 .card.collapsed { padding-top: 16px; padding-bottom: 16px; opacity: .78; }
 .card.collapsed .section-heading > .action-menu,
 .card.collapsed .count-text { display: none; }
+.collapsed-subtitle { display: none; }
+.card.collapsed .collapsed-subtitle {
+  display: block;
+  margin: 2px 0 0 27px;
+  color: #8b918a;
+  font-size: 12px;
+}
+.card.collapsed .card-collapse-button { color: #777d76; }
+.card.collapsed .collapse-icon {
+  color: var(--color-primary);
+  font-size: 0;
+  transform: none;
+}
+.card.collapsed .collapse-icon::before {
+  content: "✔";
+  font-size: 14px;
+}
 .collapsible-content > .card-subtitle { margin-top: 10px; }
 
 .section-heading,
@@ -208,6 +225,17 @@ input[type="checkbox"] {
 .check-row.completed input[type="checkbox"],
 .item-row.completed input[type="checkbox"] {
   accent-color: #2f8a67;
+}
+
+.todo-card { padding-top: 18px; padding-bottom: 18px; }
+.todo-card .card-subtitle { margin-top: 2px; }
+.todo-card .add-trigger { margin-top: 9px; }
+.todo-card .item-list { margin-top: 6px; }
+.todo-card .item-row {
+  min-height: 48px;
+  margin-top: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .action-menu { position: relative; flex: 0 0 auto; }
@@ -385,10 +413,14 @@ textarea { resize: vertical; }
   line-height: 1.8;
   text-align: center;
 }
+.reflection-card { padding-top: 17px; padding-bottom: 17px; }
+.reflection-card .reflection-complete-message { margin-top: 14px; margin-bottom: 0; }
 
 .future-todos {
-  margin: 6px 2px 20px;
+  margin: 14px 0 0;
+  padding-top: 8px;
   color: var(--color-muted);
+  border-top: 1px solid var(--color-border);
 }
 .future-todos > details > summary {
   padding: 12px 8px;
