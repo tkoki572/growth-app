@@ -89,9 +89,9 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
 .card.collapsed {
   padding-top: 15px;
   padding-bottom: 15px;
-  background: #edf3ef;
-  border-color: #d2e3d8;
-  box-shadow: 0 3px 12px rgba(35, 74, 57, .035);
+  background: #e4f0e9;
+  border-color: #c5ddcf;
+  box-shadow: 0 3px 13px rgba(35, 74, 57, .055);
 }
 .card.collapsed .section-heading > .action-menu { display: none; }
 .collapsed-subtitle { display: none; }
@@ -253,7 +253,7 @@ input[type="checkbox"] {
   padding-bottom: 6px;
 }
 
-.progress-card { padding-top: 18px; padding-bottom: 18px; }
+.progress-card { padding-top: 15px; padding-bottom: 15px; }
 
 .action-menu { position: relative; flex: 0 0 auto; }
 .action-menu summary {
@@ -329,22 +329,22 @@ input[type="checkbox"] {
   align-items: flex-end;
   justify-content: space-between;
   gap: 14px;
-  margin-top: 20px;
+  margin-top: 12px;
 }
-.progress-summary-label { display: block; margin-bottom: 5px; color: var(--color-muted); font-size: 12px; }
-.achievement-value { display: inline-flex; align-items: baseline; font-size: 30px; line-height: 1; }
+.progress-summary-label { display: block; margin-bottom: 2px; color: var(--color-muted); font-size: 12px; }
+.achievement-value { display: inline-flex; align-items: baseline; font-size: 27px; line-height: 1; }
 .achievement-unit { margin-left: 2px; font-size: 16px; }
 .progress-detail { margin: 0; text-align: right; }
-.progress-track { height: 10px; overflow: hidden; background: #e8ebe6; border-radius: 999px; }
-.achievement-track { margin-top: 10px; }
+.progress-track { height: 8px; overflow: hidden; background: #e8ebe6; border-radius: 999px; }
+.achievement-track { margin-top: 7px; }
 .progress-bar { width: 0; height: 100%; border-radius: inherit; transition: width .25s ease; }
 .achievement-bar { background: var(--color-primary); }
 .level-bar { background: var(--color-progress); }
-.progress-label { margin: 20px 0 8px; color: var(--color-muted); font-size: 12px; }
-.total-xp { margin: 10px 0 0; }
+.progress-label { margin: 12px 0 6px; color: var(--color-muted); font-size: 12px; }
+.total-xp { margin: 6px 0 0; }
 .xp-details {
-  margin-top: 16px;
-  padding-top: 13px;
+  margin-top: 10px;
+  padding-top: 9px;
   border-top: 1px solid var(--color-border);
 }
 .xp-details summary {
@@ -489,8 +489,8 @@ textarea { resize: vertical; }
   body { padding: 18px 10px 40px; }
   .input-row { align-items: stretch; flex-direction: column; }
   .input-row button { width: 100%; }
-  .progress-summary { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .progress-detail { text-align: left; }
-  .progress-label { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .progress-summary { align-items: flex-end; flex-direction: row; gap: 10px; }
+  .progress-detail { text-align: right; }
+  .progress-label { align-items: center; flex-direction: row; gap: 8px; }
   .streak-chip { font-size: 11px; }
 }

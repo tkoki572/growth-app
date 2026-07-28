@@ -867,7 +867,7 @@ function renderFutureTasks() {
   const futureTasks = state.tasks
     .filter((task) => isFutureTask(task))
     .sort((first, second) => first.visibleFrom.localeCompare(second.visibleFrom));
-  elements.futureTodoCount.textContent = `${futureTasks.length}件`;
+  elements.futureTodoCount.textContent = String(futureTasks.length);
   elements.futureTodoGroups.innerHTML = "";
 
   if (futureTasks.length === 0) {
