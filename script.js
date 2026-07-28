@@ -196,6 +196,7 @@ const elements = {
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
+  habitCollapsedName: document.getElementById("habitCollapsedName"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
   missionCard: document.getElementById("missionCard"),
@@ -314,7 +315,10 @@ function isMissionComplete() {
 
 function toggleCard(type) {
   if (type === "habit") habitCardExpanded = !habitCardExpanded;
-  else missionCardExpanded = !missionCardExpanded;
+  else {
+    if (!isMissionComplete()) return;
+    missionCardExpanded = !missionCardExpanded;
+  }
   renderCollapsibleCards();
 }
 
@@ -324,6 +328,7 @@ function renderCollapsibleCards() {
   elements.habitCard.classList.toggle("collapsed", !habitCardExpanded);
   elements.missionCardBody.hidden = !missionCardExpanded;
   elements.missionCollapseButton.setAttribute("aria-expanded", String(missionCardExpanded));
+  elements.missionCollapseButton.disabled = !isMissionComplete();
   elements.missionCard.classList.toggle("collapsed", !missionCardExpanded);
 }
 
@@ -522,7 +527,7 @@ function toggleHabit() {
   if (state.habit.completedToday) {
     queueXpAnimation("habit", null, state.totalPoints - previousPoints);
   }
-  habitCardExpanded = !state.habit.completedToday;
+  if (!state.habit.completedToday) habitCardExpanded = true;
   saveState();
   renderAll();
 }
@@ -811,6 +816,7 @@ function renderHabit() {
   elements.habitName.textContent = hasHabit
     ? state.habit.name
     : "習慣を登録してください";
+  elements.habitCollapsedName.textContent = hasHabit ? state.habit.name : "";
   elements.habitCheckbox.disabled = !hasHabit;
   elements.habitCheckbox.checked = hasHabit && state.habit.completedToday;
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
@@ -854,7 +860,7 @@ function renderTasks() {
   });
 
   const incompleteCount = todayTasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = `未完了：${incompleteCount}件`;
+  elements.taskCount.textContent = `残り${incompleteCount}件`;
 }
 
 function renderFutureTasks() {
