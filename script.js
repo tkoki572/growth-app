@@ -10,11 +10,27 @@ const XP_RULES = Object.freeze({
   completionBonus: 2,
   levelThreshold: 40
 });
+const GARDEN_THEMES = Object.freeze({
+  consistency: {
+    label: "積み重ね",
+    treeId: "keyaki",
+    treeLabel: "ケヤキ",
+    message: "毎日の小さな一歩が、\n静かに積み重なっています。"
+  },
+  challenge: {
+    label: "挑戦",
+    treeId: "nara",
+    treeLabel: "ナラ",
+    message: "踏み出した一歩が、\n静かに根を広げています。"
+  }
+});
 let levelUpAnimationPending = false;
 let missionCompleteMessageTimer = null;
 let pendingXpAnimation = null;
 let editContext = null;
 let scheduleTaskId = null;
+let selectedGardenTheme = null;
+let gardenStartPending = false;
 
 function formatLocalDate(date) {
   const year = date.getFullYear();
@@ -50,7 +66,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 6,
+    version: 7,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -69,7 +85,19 @@ function createInitialState() {
       achievementBonusAwarded: false,
       completionBonusXp: 0
     },
-    reflections: {}
+    reflections: {},
+    growthGarden: createInitialGardenState()
+  };
+}
+
+function createInitialGardenState() {
+  return {
+    version: 1,
+    selectedTheme: null,
+    startedAt: null,
+    startedDate: null,
+    countedDates: [],
+    lastCalculatedAt: null
   };
 }
 
@@ -77,11 +105,14 @@ function mergeState(savedState) {
   const initialState = createInitialState();
   const savedHabit = savedState && savedState.habit ? savedState.habit : {};
   const savedDaily = savedState && savedState.daily ? savedState.daily : {};
+  const savedGarden = savedState?.growthGarden && typeof savedState.growthGarden === "object"
+    ? savedState.growthGarden
+    : {};
 
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 6,
+    version: 7,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -121,7 +152,17 @@ function mergeState(savedState) {
               { ...reflection, xpAwarded: Boolean(reflection?.xpAwarded) }
             ])
           )
-        : {}
+        : {},
+    growthGarden: {
+      ...createInitialGardenState(),
+      ...savedGarden,
+      selectedTheme: GARDEN_THEMES[savedGarden.selectedTheme]
+        ? savedGarden.selectedTheme
+        : null,
+      countedDates: Array.isArray(savedGarden.countedDates)
+        ? [...new Set(savedGarden.countedDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort()
+        : []
+    }
   };
 }
 
@@ -174,6 +215,18 @@ let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
 
 const elements = {
+  homeView: document.getElementById("homeView"),
+  themeView: document.getElementById("themeView"),
+  gardenView: document.getElementById("gardenView"),
+  gardenEntryButton: document.getElementById("gardenEntryButton"),
+  themeOptions: [...document.querySelectorAll(".theme-option")],
+  startGardenButton: document.getElementById("startGardenButton"),
+  gardenSaveError: document.getElementById("gardenSaveError"),
+  gardenThemeLabel: document.getElementById("gardenThemeLabel"),
+  gardenTreeLabel: document.getElementById("gardenTreeLabel"),
+  gardenTreeImage: document.getElementById("gardenTreeImage"),
+  gardenImageFallback: document.getElementById("gardenImageFallback"),
+  gardenMessage: document.getElementById("gardenMessage"),
   currentDate: document.getElementById("currentDate"),
   levelCard: document.getElementById("progressCard"),
   levelUpNotice: document.getElementById("levelUpNotice"),
@@ -239,6 +292,7 @@ const elements = {
 
 setUpEventListeners();
 renderAll();
+renderAppRoute();
 window.setInterval(() => {
   const beforeDate = state.lastUsedDate;
   handleDateChange();
@@ -284,6 +338,17 @@ function handleDateChange() {
 }
 
 function setUpEventListeners() {
+  elements.gardenEntryButton.addEventListener("click", openGrowthGarden);
+  elements.themeOptions.forEach((option) => {
+    option.addEventListener("click", () => selectGardenTheme(option.dataset.theme));
+  });
+  elements.startGardenButton.addEventListener("click", startGrowthGarden);
+  document.querySelectorAll("[data-garden-back]").forEach((button) => {
+    button.addEventListener("click", () => { window.location.hash = ""; });
+  });
+  window.addEventListener("hashchange", renderAppRoute);
+  elements.gardenTreeImage.addEventListener("error", showGardenImageFallback);
+  elements.gardenTreeImage.addEventListener("load", hideGardenImageFallback);
   elements.habitCollapseButton.addEventListener("click", () => toggleCard("habit"));
   elements.missionCollapseButton.addEventListener("click", () => toggleCard("mission"));
   elements.habitForm.addEventListener("submit", saveHabitName);
@@ -306,6 +371,128 @@ function setUpEventListeners() {
   elements.scheduleCancelButton.addEventListener("click", () => elements.scheduleDialog.close());
   document.addEventListener("toggle", closeOtherMenus, true);
   document.addEventListener("click", closeMenusFromOutside);
+}
+
+function openGrowthGarden() {
+  window.location.hash = state.growthGarden.selectedTheme ? "garden" : "garden-theme";
+}
+
+function selectGardenTheme(themeId) {
+  if (!GARDEN_THEMES[themeId] || state.growthGarden.selectedTheme) return;
+  selectedGardenTheme = themeId;
+  elements.themeOptions.forEach((option) => {
+    const isSelected = option.dataset.theme === themeId;
+    option.classList.toggle("selected", isSelected);
+    option.setAttribute("aria-checked", String(isSelected));
+  });
+  elements.startGardenButton.disabled = false;
+  elements.gardenSaveError.textContent = "";
+}
+
+function startGrowthGarden() {
+  if (gardenStartPending || state.growthGarden.selectedTheme || !GARDEN_THEMES[selectedGardenTheme]) return;
+  gardenStartPending = true;
+  elements.startGardenButton.disabled = true;
+  const now = new Date();
+  state.growthGarden = {
+    version: 1,
+    selectedTheme: selectedGardenTheme,
+    startedAt: now.toISOString(),
+    startedDate: getLocalDateString(now),
+    countedDates: [],
+    lastCalculatedAt: now.toISOString()
+  };
+  try {
+    saveState();
+    window.location.hash = "garden";
+  } catch (error) {
+    state.growthGarden = createInitialGardenState();
+    gardenStartPending = false;
+    elements.startGardenButton.disabled = false;
+    elements.gardenSaveError.textContent = "保存できませんでした。もう一度お試しください。";
+  }
+}
+
+function renderAppRoute() {
+  const themeIsValid = Boolean(GARDEN_THEMES[state.growthGarden.selectedTheme]);
+  let route = window.location.hash.replace("#", "");
+  if (route === "garden" && !themeIsValid) route = "garden-theme";
+  if (route === "garden-theme" && themeIsValid) route = "garden";
+  if (!new Set(["garden", "garden-theme"]).has(route)) route = "home";
+
+  elements.homeView.hidden = route !== "home";
+  elements.themeView.hidden = route !== "garden-theme";
+  elements.gardenView.hidden = route !== "garden";
+  document.body.classList.toggle("garden-mode", route !== "home");
+  if (route === "garden-theme") renderThemeSelection();
+  if (route === "garden") renderGardenScreen();
+  window.scrollTo(0, 0);
+}
+
+function renderThemeSelection() {
+  selectedGardenTheme = null;
+  gardenStartPending = false;
+  elements.themeOptions.forEach((option) => {
+    option.classList.remove("selected");
+    option.setAttribute("aria-checked", "false");
+  });
+  elements.startGardenButton.disabled = true;
+  elements.gardenSaveError.textContent = "";
+}
+
+function getGardenStage(completedDays) {
+  if (completedDays >= 120) return 7;
+  if (completedDays >= 60) return 6;
+  if (completedDays >= 30) return 5;
+  if (completedDays >= 14) return 4;
+  if (completedDays >= 7) return 3;
+  if (completedDays >= 3) return 2;
+  return 1;
+}
+
+function getGardenAssetPath(themeId, stage) {
+  if (stage === 1) return "assets/garden/common/stage-1.svg";
+  return `assets/garden/${GARDEN_THEMES[themeId].treeId}/stage-${stage}.svg`;
+}
+
+function renderGardenScreen() {
+  const themeId = state.growthGarden.selectedTheme;
+  const theme = GARDEN_THEMES[themeId];
+  if (!theme) {
+    window.location.hash = "garden-theme";
+    return;
+  }
+  const stage = getGardenStage(state.growthGarden.countedDates.length);
+  const stageDescriptions = ["土", "小さな芽", "双葉", "苗", "小さな若木", "大きな若木", "成熟した木"];
+  elements.gardenThemeLabel.textContent = theme.label;
+  elements.gardenTreeLabel.textContent = theme.treeLabel;
+  elements.gardenMessage.innerHTML = theme.message.replace("\n", "<br>");
+  elements.gardenTreeImage.alt = `${theme.label}を表す、${stageDescriptions[stage - 1]}の${theme.treeLabel}`;
+  elements.gardenImageFallback.hidden = true;
+  elements.gardenTreeImage.hidden = false;
+  elements.gardenTreeImage.src = getGardenAssetPath(themeId, stage);
+}
+
+function syncGardenHabitDate(isCompleted) {
+  const garden = state.growthGarden;
+  if (!GARDEN_THEMES[garden.selectedTheme] || !garden.startedDate) return;
+  const today = getLocalDateString();
+  if (today < garden.startedDate) return;
+  const dates = new Set(garden.countedDates);
+  if (isCompleted) dates.add(today);
+  else dates.delete(today);
+  garden.countedDates = [...dates].sort();
+  garden.lastCalculatedAt = new Date().toISOString();
+}
+
+function showGardenImageFallback() {
+  elements.gardenTreeImage.hidden = true;
+  elements.gardenImageFallback.hidden = false;
+}
+
+function hideGardenImageFallback() {
+  elements.gardenTreeImage.hidden = false;
+  elements.gardenImageFallback.hidden = true;
 }
 
 function isMissionComplete() {
@@ -487,6 +674,7 @@ function deleteHabit() {
     removePoints(XP_RULES.habit);
   }
   state.habit = { ...createInitialState().habit };
+  syncGardenHabitDate(false);
   habitCardExpanded = true;
   elements.habitMenu.open = false;
   checkAndAwardAchievementBonus();
@@ -528,6 +716,7 @@ function toggleHabit() {
     queueXpAnimation("habit", null, state.totalPoints - previousPoints);
   }
   if (!state.habit.completedToday) habitCardExpanded = true;
+  syncGardenHabitDate(state.habit.completedToday);
   saveState();
   renderAll();
 }

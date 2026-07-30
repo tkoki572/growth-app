@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="app">
+  <main id="homeView" class="app app-view">
     <header class="app-header">
       <p class="eyebrow">SELF GROWTH</p>
       <p id="currentDate" class="current-date"></p>
@@ -125,6 +125,15 @@
       </details>
     </section>
 
+    <button id="gardenEntryButton" class="card garden-entry-card" type="button" aria-label="Growth Gardenを開く">
+      <span class="garden-entry-mark" aria-hidden="true">🌱</span>
+      <span class="garden-entry-copy">
+        <strong>Growth Garden</strong>
+        <span>あなたの毎日が、<br>少しずつ育つ場所。</span>
+      </span>
+      <span class="garden-entry-arrow" aria-hidden="true">›</span>
+    </button>
+
     <section id="reflectionSection" class="card reflection-card" aria-labelledby="reflectionHeading">
       <div class="section-heading">
         <div>
@@ -147,6 +156,48 @@
       <p id="reflectionCompleteMessage" class="reflection-complete-message" hidden>🌙 今日もお疲れさまでした。<br>また明日、少し前へ。</p>
     </section>
 
+  </main>
+
+  <main id="themeView" class="garden-view app-view" hidden>
+    <button class="garden-back-button" type="button" data-garden-back>‹ ホーム</button>
+    <header class="garden-view-header">
+      <p class="garden-eyebrow">Growth Garden</p>
+      <h1>今日からの一歩に、<br>テーマを選びましょう。</h1>
+      <p>どんな大きな木も、<br>小さな種から始まります。</p>
+    </header>
+    <div class="theme-options" role="radiogroup" aria-label="Gardenテーマ">
+      <button class="theme-option" type="button" role="radio" aria-checked="false" data-theme="consistency">
+        <span class="theme-check" aria-hidden="true">✓</span>
+        <span class="seed-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        <strong>積み重ね</strong>
+        <span>小さな積み重ねが、<br>大きな木になる。</span>
+      </button>
+      <button class="theme-option" type="button" role="radio" aria-checked="false" data-theme="challenge">
+        <span class="theme-check" aria-hidden="true">✓</span>
+        <span class="acorn-icon" aria-hidden="true">●</span>
+        <strong>挑戦</strong>
+        <span>新しい景色は、<br>一歩踏み出した先にある。</span>
+      </button>
+    </div>
+    <button id="startGardenButton" class="start-garden-button" type="button" disabled>このテーマではじめる</button>
+    <p id="gardenSaveError" class="garden-error" role="alert"></p>
+  </main>
+
+  <main id="gardenView" class="garden-view app-view" hidden>
+    <button class="garden-back-button" type="button" data-garden-back>‹ ホーム</button>
+    <header class="garden-screen-header">
+      <p class="garden-eyebrow">Growth Garden</p>
+      <h1 id="gardenThemeLabel">積み重ね</h1>
+      <p id="gardenTreeLabel" class="garden-tree-label">ケヤキ</p>
+    </header>
+    <figure class="garden-scene">
+      <img id="gardenTreeImage" src="" alt="" decoding="async">
+      <div id="gardenImageFallback" class="garden-image-fallback" hidden>
+        <span aria-hidden="true">🌱</span>
+        <p>庭はゆっくり育っています。</p>
+      </div>
+    </figure>
+    <p id="gardenMessage" class="garden-message">毎日の小さな一歩が、<br>静かに積み重なっています。</p>
   </main>
 
   <dialog id="editDialog" class="edit-dialog">
