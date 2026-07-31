@@ -315,14 +315,6 @@ input[type="checkbox"] {
   font-size: 13px;
 }
 .error-message:empty { display: none; }
-.mission-complete-message {
-  margin: 8px 0 0;
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 700;
-}
-.mission-complete-message:empty { display: none; }
-
 .level-number { font-size: 26px; }
 .progress-summary {
   display: flex;
@@ -414,24 +406,6 @@ input[type="checkbox"] {
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .secondary-button { color: var(--color-text); background: var(--color-soft); }
 .secondary-button:hover { background: #e8ebe6; }
-
-.range-heading { margin-top: 18px; font-weight: 700; }
-.range-input { width: 100%; margin: 15px 0 21px; accent-color: var(--color-primary); }
-.field-label { display: block; margin-bottom: 8px; font-weight: 700; }
-.field-label span { color: var(--color-muted); font-size: 12px; font-weight: 400; }
-textarea { resize: vertical; }
-.save-button { width: 100%; margin-top: 12px; }
-.save-message { min-height: 20px; margin: 8px 0 0; color: var(--color-muted); font-size: 13px; text-align: center; }
-.reflection-complete-message {
-  margin: 20px 0 4px;
-  color: var(--color-primary);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.8;
-  text-align: center;
-}
-.reflection-card { padding-top: 17px; padding-bottom: 17px; }
-.reflection-card .reflection-complete-message { margin-top: 14px; margin-bottom: 0; }
 
 .garden-entry-card {
   display: grid;

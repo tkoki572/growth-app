@@ -2,11 +2,10 @@ const STORAGE_KEY = "selfGrowthAppState";
 const OLD_TODO_STORAGE_KEY = "todos";
 const XP_RULES = Object.freeze({
   habit: 5,
-  mission: 2,
+  missionByOrder: Object.freeze([2, 2, 4]),
   missionMaxCount: 3,
   todo: 1,
   todoMaxCount: 5,
-  reflection: 2,
   completionBonus: 2,
   levelThreshold: 40
 });
@@ -25,7 +24,6 @@ const GARDEN_THEMES = Object.freeze({
   }
 });
 let levelUpAnimationPending = false;
-let missionCompleteMessageTimer = null;
 let pendingXpAnimation = null;
 let editContext = null;
 let scheduleTaskId = null;
@@ -66,7 +64,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 7,
+    version: 8,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -112,7 +110,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 7,
+    version: 8,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -213,6 +211,7 @@ let state = loadState();
 handleDateChange();
 let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
+let todoCardExpanded = !isTodoComplete();
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -258,9 +257,11 @@ const elements = {
   missionOpenButton: document.getElementById("missionOpenButton"),
   missionInput: document.getElementById("missionInput"),
   missionError: document.getElementById("missionError"),
-  missionCompleteMessage: document.getElementById("missionCompleteMessage"),
   missionList: document.getElementById("missionList"),
   missionCount: document.getElementById("missionCount"),
+  todoCard: document.getElementById("todoCard"),
+  todoCardBody: document.getElementById("todoCardBody"),
+  todoCollapseButton: document.getElementById("todoCollapseButton"),
   taskForm: document.getElementById("taskForm"),
   taskOpenButton: document.getElementById("taskOpenButton"),
   taskInput: document.getElementById("taskInput"),
@@ -270,14 +271,6 @@ const elements = {
   futureTodoDetails: document.getElementById("futureTodoDetails"),
   futureTodoCount: document.getElementById("futureTodoCount"),
   futureTodoGroups: document.getElementById("futureTodoGroups"),
-  reflectionForm: document.getElementById("reflectionForm"),
-  reflectionSection: document.getElementById("reflectionSection"),
-  satisfactionRange: document.getElementById("satisfactionRange"),
-  satisfactionValue: document.getElementById("satisfactionValue"),
-  goodThingInput: document.getElementById("goodThingInput"),
-  reflectionMessage: document.getElementById("reflectionMessage"),
-  reflectionEditButton: document.getElementById("reflectionEditButton"),
-  reflectionCompleteMessage: document.getElementById("reflectionCompleteMessage"),
   editDialog: document.getElementById("editDialog"),
   editForm: document.getElementById("editForm"),
   editDialogTitle: document.getElementById("editDialogTitle"),
@@ -299,9 +292,10 @@ window.setInterval(() => {
   if (state.lastUsedDate !== beforeDate) {
     habitCardExpanded = true;
     missionCardExpanded = true;
+    todoCardExpanded = true;
     renderAll();
   }
-  else renderCurrentDateAndReflectionVisibility();
+  else renderCurrentDate();
 }, 60000);
 
 function handleDateChange() {
@@ -351,6 +345,7 @@ function setUpEventListeners() {
   elements.gardenTreeImage.addEventListener("load", hideGardenImageFallback);
   elements.habitCollapseButton.addEventListener("click", () => toggleCard("habit"));
   elements.missionCollapseButton.addEventListener("click", () => toggleCard("mission"));
+  elements.todoCollapseButton.addEventListener("click", () => toggleCard("todo"));
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
   elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
@@ -359,9 +354,6 @@ function setUpEventListeners() {
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
   elements.taskForm.addEventListener("submit", addTask);
-  elements.reflectionForm.addEventListener("submit", saveReflection);
-  elements.reflectionEditButton.addEventListener("click", editReflection);
-  elements.satisfactionRange.addEventListener("input", updateSatisfactionLabel);
   elements.editForm.addEventListener("submit", saveEditedItem);
   elements.editCancelButton.addEventListener("click", () => elements.editDialog.close());
   elements.scheduleDialog.querySelectorAll("[data-schedule-days]").forEach((button) => {
@@ -496,15 +488,29 @@ function hideGardenImageFallback() {
 }
 
 function isMissionComplete() {
-  return state.missions.length === XP_RULES.missionMaxCount &&
+  return state.missions.length > 0 &&
     state.missions.every((mission) => mission.completed);
 }
 
+function getTodayTasks() {
+  return state.tasks.filter((task) => !isFutureTask(task));
+}
+
+function isTodoComplete() {
+  const todayTasks = getTodayTasks();
+  return todayTasks.length > 0 && todayTasks.every((task) => task.completed);
+}
+
 function toggleCard(type) {
-  if (type === "habit") habitCardExpanded = !habitCardExpanded;
-  else {
+  if (type === "habit") {
+    if (!state.habit.completedToday) return;
+    habitCardExpanded = !habitCardExpanded;
+  } else if (type === "mission") {
     if (!isMissionComplete()) return;
     missionCardExpanded = !missionCardExpanded;
+  } else {
+    if (!isTodoComplete()) return;
+    todoCardExpanded = !todoCardExpanded;
   }
   renderCollapsibleCards();
 }
@@ -512,11 +518,16 @@ function toggleCard(type) {
 function renderCollapsibleCards() {
   elements.habitCardBody.hidden = !habitCardExpanded;
   elements.habitCollapseButton.setAttribute("aria-expanded", String(habitCardExpanded));
+  elements.habitCollapseButton.disabled = !state.habit.completedToday;
   elements.habitCard.classList.toggle("collapsed", !habitCardExpanded);
   elements.missionCardBody.hidden = !missionCardExpanded;
   elements.missionCollapseButton.setAttribute("aria-expanded", String(missionCardExpanded));
   elements.missionCollapseButton.disabled = !isMissionComplete();
   elements.missionCard.classList.toggle("collapsed", !missionCardExpanded);
+  elements.todoCardBody.hidden = !todoCardExpanded;
+  elements.todoCollapseButton.setAttribute("aria-expanded", String(todoCardExpanded));
+  elements.todoCollapseButton.disabled = !isTodoComplete();
+  elements.todoCard.classList.toggle("collapsed", !todoCardExpanded);
 }
 
 function addPoints(points) {
@@ -658,6 +669,7 @@ function applyTaskSchedule(visibleFrom) {
   }
 
   task.visibleFrom = visibleFrom;
+  if (!visibleFrom) todoCardExpanded = true;
   state.tasks.splice(taskIndex, 1);
   state.tasks.push(task);
   elements.scheduleDialog.close();
@@ -753,17 +765,12 @@ function addMission(event) {
     pointAwarded: false,
     xpAwarded: 0
   });
+  missionCardExpanded = true;
+  checkAndAwardAchievementBonus();
   elements.missionError.textContent = "";
   closeQuickAdd("mission");
   saveState();
   renderAll();
-  if (state.missions.length === XP_RULES.missionMaxCount) {
-    elements.missionCompleteMessage.textContent = "🎯 今日のMission完成！";
-    window.clearTimeout(missionCompleteMessageTimer);
-    missionCompleteMessageTimer = window.setTimeout(() => {
-      elements.missionCompleteMessage.textContent = "";
-    }, 3000);
-  }
 }
 
 function toggleMission(id) {
@@ -776,9 +783,11 @@ function toggleMission(id) {
     vibrateOnCompletion();
     if (!mission.pointAwarded) {
       if (state.daily.missionXpCount < XP_RULES.missionMaxCount) {
-        addPoints(XP_RULES.mission);
+        const missionIndex = state.missions.findIndex((item) => item.id === id);
+        const missionXp = XP_RULES.missionByOrder[missionIndex] || 0;
+        addPoints(missionXp);
         state.daily.missionXpCount += 1;
-        mission.xpAwarded = XP_RULES.mission;
+        mission.xpAwarded = missionXp;
       }
       mission.pointAwarded = true;
     }
@@ -794,7 +803,7 @@ function toggleMission(id) {
   if (mission.completed) {
     queueXpAnimation("mission", id, state.totalPoints - previousPoints);
   }
-  missionCardExpanded = !isMissionComplete();
+  if (!isMissionComplete()) missionCardExpanded = true;
   saveState();
   renderAll();
 }
@@ -830,6 +839,7 @@ function addTask(event) {
     completedDate: null,
     visibleFrom: null
   });
+  todoCardExpanded = true;
   elements.taskError.textContent = "";
   closeQuickAdd("task");
   saveState();
@@ -865,6 +875,7 @@ function toggleTask(id) {
   if (task.completed) {
     queueXpAnimation("task", id, state.totalPoints - previousPoints);
   }
+  if (!isTodoComplete()) todoCardExpanded = true;
   saveState();
   renderAll();
 }
@@ -876,6 +887,7 @@ function deleteTask(id) {
     state.daily.todoXpCount = Math.max(0, state.daily.todoXpCount - 1);
   }
   state.tasks = state.tasks.filter((task) => task.id !== id);
+  if (!isTodoComplete()) todoCardExpanded = true;
   saveState();
   renderAll();
 }
@@ -886,9 +898,7 @@ function queueXpAnimation(type, id, amount) {
 
 function getAchievement() {
   const hasHabit = Boolean(state.habit.name);
-  const total = hasHabit || state.missions.length > 0
-    ? XP_RULES.missionMaxCount + 1
-    : 0;
+  const total = state.missions.length + (hasHabit ? 1 : 0);
   const completedMissions = state.missions.filter((mission) => mission.completed).length;
   const completed = completedMissions + (hasHabit && state.habit.completedToday ? 1 : 0);
   const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
@@ -899,8 +909,7 @@ function checkAndAwardAchievementBonus() {
   const isComplete = Boolean(
     state.habit.name &&
     state.habit.completedToday &&
-    state.missions.length === XP_RULES.missionMaxCount &&
-    state.missions.every((mission) => mission.completed)
+    isMissionComplete()
   );
 
   if (isComplete && !state.daily.achievementBonusAwarded) {
@@ -914,35 +923,6 @@ function checkAndAwardAchievementBonus() {
   }
 }
 
-function saveReflection(event) {
-  event.preventDefault();
-  const today = getLocalDateString();
-  const existingReflection = state.reflections[today];
-  const isFirstXpAward = !existingReflection?.xpAwarded;
-
-  state.reflections[today] = {
-    date: today,
-    satisfaction: Number(elements.satisfactionRange.value),
-    goodThing: elements.goodThingInput.value.trim(),
-    xpAwarded: true
-  };
-
-  if (isFirstXpAward) {
-    addPoints(XP_RULES.reflection);
-    queueXpAnimation("reflection", null, XP_RULES.reflection);
-  }
-  elements.goodThingInput.blur();
-  saveState();
-  renderAll();
-}
-
-function editReflection() {
-  elements.reflectionForm.hidden = false;
-  elements.reflectionEditButton.hidden = true;
-  elements.reflectionCompleteMessage.hidden = true;
-  elements.goodThingInput.focus();
-}
-
 function renderAll() {
   renderCurrentDate();
   renderLevel();
@@ -951,7 +931,6 @@ function renderAll() {
   renderMissions();
   renderTasks();
   renderFutureTasks();
-  renderReflection();
   renderCollapsibleCards();
   renderLevelUpAnimation();
   renderXpAnimation();
@@ -962,12 +941,6 @@ function renderCurrentDate() {
   const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
   elements.currentDate.textContent =
     `${now.getMonth() + 1}月${now.getDate()}日（${weekdays[now.getDay()]}）`;
-}
-
-function renderCurrentDateAndReflectionVisibility() {
-  renderCurrentDate();
-  const hour = new Date().getHours();
-  elements.reflectionSection.hidden = !(hour >= 18 || hour < 5);
 }
 
 function renderLevel() {
@@ -1020,10 +993,11 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
-  const completedCount = state.missions.filter((mission) => mission.completed).length;
-  elements.missionCount.textContent = `${completedCount} / ${XP_RULES.missionMaxCount} 完了`;
+  const remainingCount = state.missions.filter((mission) => !mission.completed).length;
+  elements.missionCount.textContent = `残り${remainingCount}件`;
   const isFull = state.missions.length >= XP_RULES.missionMaxCount;
-  if (isFull) elements.missionForm.hidden = true;
+  if (state.missions.length === 0) elements.missionForm.hidden = false;
+  else if (isFull) elements.missionForm.hidden = true;
   elements.missionOpenButton.hidden = isFull || !elements.missionForm.hidden;
 
   const sortedMissions = [...state.missions].sort(
@@ -1039,7 +1013,7 @@ function renderMissions() {
 
 function renderTasks() {
   elements.taskList.innerHTML = "";
-  const todayTasks = state.tasks.filter((task) => !isFutureTask(task));
+  const todayTasks = getTodayTasks();
   const sortedTasks = [...todayTasks].sort(
     (first, second) => Number(first.completed) - Number(second.completed)
   );
@@ -1177,27 +1151,6 @@ function createFutureListItem(task) {
   return listItem;
 }
 
-function renderReflection() {
-  renderCurrentDateAndReflectionVisibility();
-  const todayReflection = state.reflections[getLocalDateString()];
-
-  if (todayReflection) {
-    elements.satisfactionRange.value = String(todayReflection.satisfaction);
-    elements.goodThingInput.value = todayReflection.goodThing;
-    elements.reflectionForm.hidden = true;
-    elements.reflectionEditButton.hidden = false;
-    elements.reflectionCompleteMessage.hidden = false;
-  } else {
-    elements.satisfactionRange.value = "3";
-    elements.goodThingInput.value = "";
-    elements.reflectionForm.hidden = false;
-    elements.reflectionEditButton.hidden = true;
-    elements.reflectionCompleteMessage.hidden = true;
-  }
-
-  updateSatisfactionLabel();
-}
-
 function renderLevelUpAnimation() {
   if (!levelUpAnimationPending) return;
   levelUpAnimationPending = false;
@@ -1219,9 +1172,7 @@ function renderXpAnimation() {
   pendingXpAnimation = null;
   const target = type === "habit"
     ? (habitCardExpanded ? elements.habitCheckLabel : elements.habitCard)
-    : type === "reflection"
-      ? elements.reflectionSection
-      : type === "mission" && !missionCardExpanded
+    : type === "mission" && !missionCardExpanded
         ? elements.missionCard
       : document.querySelector(
         `${type === "mission" ? "#missionList" : "#taskList"} [data-item-id="${CSS.escape(id)}"]`
@@ -1233,8 +1184,4 @@ function renderXpAnimation() {
   target.appendChild(reward);
   reward.addEventListener("animationend", () => reward.remove(), { once: true });
   window.setTimeout(() => reward.remove(), 1200);
-}
-
-function updateSatisfactionLabel() {
-  elements.satisfactionValue.textContent = `${elements.satisfactionRange.value} / 5`;
 }

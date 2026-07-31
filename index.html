@@ -48,42 +48,44 @@
       <div class="section-heading">
         <div>
           <h2 id="missionHeading"><button id="missionCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="missionCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>今日のMission</button></h2>
-          <p class="collapsed-subtitle">今日少し前へ進むこと</p>
+          <p class="collapsed-subtitle">今日、少し前へ進めたいこと</p>
         </div>
-        <span id="missionCount" class="count-text">0 / 3 完了</span>
+        <span id="missionCount" class="count-text">残り0件</span>
       </div>
       <div id="missionCardBody" class="collapsible-content">
-        <p class="card-subtitle">今日、少し前に進むための3つ</p>
-        <button id="missionOpenButton" class="add-trigger" type="button">＋ 追加</button>
-        <form id="missionForm" class="quick-add-form" hidden>
+        <p class="card-subtitle">今日、少し前へ進めたいこと</p>
+        <form id="missionForm" class="quick-add-form">
           <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力してEnter" aria-label="Mission" enterkeyhint="done" autocomplete="off">
         </form>
         <p id="missionError" class="error-message" role="alert"></p>
-        <p id="missionCompleteMessage" class="mission-complete-message" role="status"></p>
         <ul id="missionList" class="item-list"></ul>
+        <button id="missionOpenButton" class="add-trigger" type="button" hidden>＋ 追加</button>
       </div>
     </section>
 
-    <section class="card todo-card" aria-labelledby="taskHeading">
+    <section id="todoCard" class="card todo-card" aria-labelledby="taskHeading">
       <div class="section-heading">
         <div>
-          <h2 id="taskHeading">Todo</h2>
-          <p class="card-subtitle">忘れないためのメモ</p>
+          <h2 id="taskHeading"><button id="todoCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="todoCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>Todo</button></h2>
+          <p class="collapsed-subtitle">忘れないためのメモ</p>
         </div>
-        <span id="taskCount" class="count-text">未完了：0件</span>
+        <span id="taskCount" class="count-text">残り0件</span>
       </div>
-      <button id="taskOpenButton" class="add-trigger" type="button">＋ 追加</button>
-      <form id="taskForm" class="quick-add-form" hidden>
-        <input id="taskInput" type="text" maxlength="100" placeholder="Todoを入力してEnter" aria-label="Todo" enterkeyhint="done" autocomplete="off">
-      </form>
-      <p id="taskError" class="error-message" role="alert"></p>
-      <ul id="taskList" class="item-list"></ul>
-      <section class="future-todos" aria-labelledby="futureTodoHeading">
-        <details id="futureTodoDetails">
-          <summary><span id="futureTodoHeading">あとで表示（<span id="futureTodoCount">0</span>）</span></summary>
-          <div id="futureTodoGroups" class="future-todo-groups"></div>
-        </details>
-      </section>
+      <div id="todoCardBody" class="collapsible-content">
+        <p class="card-subtitle">忘れないためのメモ</p>
+        <form id="taskForm" class="quick-add-form" hidden>
+          <input id="taskInput" type="text" maxlength="100" placeholder="Todoを入力してEnter" aria-label="Todo" enterkeyhint="done" autocomplete="off">
+        </form>
+        <p id="taskError" class="error-message" role="alert"></p>
+        <ul id="taskList" class="item-list"></ul>
+        <button id="taskOpenButton" class="add-trigger" type="button">＋ 追加</button>
+        <section class="future-todos" aria-labelledby="futureTodoHeading">
+          <details id="futureTodoDetails">
+            <summary><span id="futureTodoHeading">あとで表示（<span id="futureTodoCount">0</span>）</span></summary>
+            <div id="futureTodoGroups" class="future-todo-groups"></div>
+          </details>
+        </section>
+      </div>
     </section>
 
     <section id="progressCard" class="card progress-card" aria-labelledby="progressHeading">
@@ -116,9 +118,10 @@
         <summary>XP獲得ルール</summary>
         <ul>
           <li><span>🌱 習慣を完了</span><strong>+5XP</strong></li>
-          <li><span>🎯 Missionを1つ完了（最大3件）</span><strong>+2XP</strong></li>
+          <li><span>🎯 Mission①を完了</span><strong>+2XP</strong></li>
+          <li><span>🎯 Mission②を完了</span><strong>+2XP</strong></li>
+          <li><span>🎯 Mission③を完了</span><strong>+4XP</strong></li>
           <li><span>📝 Todoを1つ完了（最大5件）</span><strong>+1XP</strong></li>
-          <li><span>🌙 今日の振り返りを保存</span><strong>+2XP</strong></li>
           <li><span>🎉 コンプリートボーナス</span><strong>+2XP</strong></li>
         </ul>
         <p>最大20XP / 日</p>
@@ -133,28 +136,6 @@
       </span>
       <span class="garden-entry-arrow" aria-hidden="true">›</span>
     </button>
-
-    <section id="reflectionSection" class="card reflection-card" aria-labelledby="reflectionHeading">
-      <div class="section-heading">
-        <div>
-          <h2 id="reflectionHeading">今日の振り返り</h2>
-          <p class="card-subtitle">一日の締めくくり</p>
-        </div>
-        <button id="reflectionEditButton" class="icon-button" type="button" aria-label="今日の振り返りを編集" title="振り返りを編集" hidden>✎</button>
-      </div>
-      <form id="reflectionForm">
-        <div class="range-heading">
-          <label for="satisfactionRange">今日の充実度</label>
-          <output id="satisfactionValue" for="satisfactionRange">3 / 5</output>
-        </div>
-        <input id="satisfactionRange" class="range-input" type="range" min="1" max="5" value="3">
-        <label class="field-label" for="goodThingInput">今日、一番よかったことは？ <span>（任意）</span></label>
-        <textarea id="goodThingInput" rows="3" maxlength="300" placeholder="小さなことでも大丈夫です"></textarea>
-        <button class="save-button" type="submit">今日の振り返りを保存</button>
-        <p id="reflectionMessage" class="save-message" role="status"></p>
-      </form>
-      <p id="reflectionCompleteMessage" class="reflection-complete-message" hidden>🌙 今日もお疲れさまでした。<br>また明日、少し前へ。</p>
-    </section>
 
   </main>
 
