@@ -96,6 +96,19 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   box-shadow: 0 3px 13px rgba(35, 74, 57, .055);
 }
 .card.collapsed .section-heading > .action-menu { display: none; }
+.habit-collapsed-name { display: none; }
+.habit-card.collapsed .section-heading > div { flex: 0 0 auto; }
+.habit-card.collapsed .habit-collapsed-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #777d76;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .card.collapsed .card-collapse-button { color: #777d76; }
 .card.collapsed .collapse-icon {
   color: var(--color-primary);

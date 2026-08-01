@@ -245,6 +245,7 @@ const elements = {
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
+  habitCollapsedName: document.getElementById("habitCollapsedName"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
   missionCard: document.getElementById("missionCard"),
@@ -955,6 +956,7 @@ function renderHabit() {
   elements.habitName.textContent = hasHabit
     ? state.habit.name
     : "習慣を登録してください";
+  elements.habitCollapsedName.textContent = hasHabit ? state.habit.name : "";
   elements.habitCheckbox.disabled = !hasHabit;
   elements.habitCheckbox.checked = hasHabit && state.habit.completedToday;
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
