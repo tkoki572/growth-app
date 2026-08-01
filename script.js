@@ -507,6 +507,7 @@ function toggleCard(type) {
   } else {
     if (!isTodoComplete()) return;
     todoCardExpanded = !todoCardExpanded;
+    if (!todoCardExpanded) elements.futureTodoDetails.open = false;
   }
   renderCollapsibleCards();
 }
@@ -999,10 +1000,10 @@ function renderTasks() {
     elements.taskList.appendChild(createListItem(task, toggleTask, deleteTask));
   });
 
-  const completedCount = todayTasks.filter((task) => task.completed).length;
+  const incompleteCount = todayTasks.filter((task) => !task.completed).length;
   elements.taskCount.textContent = isTodoComplete()
     ? "すべて完了"
-    : `${completedCount}件完了`;
+    : `未完了${incompleteCount}件`;
 }
 
 function renderFutureTasks() {
