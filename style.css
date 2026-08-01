@@ -89,20 +89,13 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
 }
 .card-collapse-button[aria-expanded="false"] .collapse-icon { transform: rotate(-90deg); }
 .card.collapsed {
-  padding-top: 15px;
-  padding-bottom: 15px;
+  padding-top: 9px;
+  padding-bottom: 9px;
   background: #e4f0e9;
   border-color: #c5ddcf;
   box-shadow: 0 3px 13px rgba(35, 74, 57, .055);
 }
 .card.collapsed .section-heading > .action-menu { display: none; }
-.collapsed-subtitle { display: none; }
-.card.collapsed .collapsed-subtitle {
-  display: block;
-  margin: 2px 0 0 27px;
-  color: #8b918a;
-  font-size: 12px;
-}
 .card.collapsed .card-collapse-button { color: #777d76; }
 .card.collapsed .collapse-icon {
   color: var(--color-primary);
@@ -114,15 +107,6 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   font-size: 14px;
 }
 .card-collapse-button:disabled { cursor: default; }
-.collapsed-habit-name { display: none; }
-.card.collapsed .collapsed-habit-name {
-  display: block;
-  margin: 8px 0 0 27px;
-  color: #777d76;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: line-through;
-}
 .collapsible-content > .card-subtitle { margin-top: 10px; }
 
 .section-heading,

@@ -64,7 +64,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 8,
+    version: 9,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -110,7 +110,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 8,
+    version: 9,
     habit: { ...initialState.habit, ...savedHabit },
     daily: {
       ...initialState.daily,
@@ -245,7 +245,6 @@ const elements = {
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
-  habitCollapsedName: document.getElementById("habitCollapsedName"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
   missionCard: document.getElementById("missionCard"),
@@ -495,7 +494,7 @@ function getTodayTasks() {
 
 function isTodoComplete() {
   const todayTasks = getTodayTasks();
-  return todayTasks.length > 0 && todayTasks.every((task) => task.completed);
+  return todayTasks.every((task) => task.completed);
 }
 
 function toggleCard(type) {
@@ -955,7 +954,6 @@ function renderHabit() {
   elements.habitName.textContent = hasHabit
     ? state.habit.name
     : "習慣を登録してください";
-  elements.habitCollapsedName.textContent = hasHabit ? state.habit.name : "";
   elements.habitCheckbox.disabled = !hasHabit;
   elements.habitCheckbox.checked = hasHabit && state.habit.completedToday;
   elements.habitCheckLabel.classList.toggle("empty-row", !hasHabit);
@@ -970,8 +968,10 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
-  const remainingCount = state.missions.filter((mission) => !mission.completed).length;
-  elements.missionCount.textContent = `残り${remainingCount}件`;
+  const completedCount = state.missions.filter((mission) => mission.completed).length;
+  elements.missionCount.textContent = isMissionComplete()
+    ? "すべて完了"
+    : `${completedCount}件完了`;
   const isFull = state.missions.length >= XP_RULES.missionMaxCount;
   if (state.missions.length === 0) elements.missionForm.hidden = false;
   else if (isFull) elements.missionForm.hidden = true;
@@ -999,8 +999,10 @@ function renderTasks() {
     elements.taskList.appendChild(createListItem(task, toggleTask, deleteTask));
   });
 
-  const incompleteCount = todayTasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = `残り${incompleteCount}件`;
+  const completedCount = todayTasks.filter((task) => task.completed).length;
+  elements.taskCount.textContent = isTodoComplete()
+    ? "すべて完了"
+    : `${completedCount}件完了`;
 }
 
 function renderFutureTasks() {
