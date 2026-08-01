@@ -234,9 +234,6 @@ const elements = {
   levelRemainingText: document.getElementById("levelRemainingText"),
   levelProgress: document.getElementById("levelProgress"),
   totalPointText: document.getElementById("totalPointText"),
-  achievementText: document.getElementById("achievementText"),
-  achievementProgress: document.getElementById("achievementProgress"),
-  achievementDetail: document.getElementById("achievementDetail"),
   habitForm: document.getElementById("habitForm"),
   habitCard: document.getElementById("habitCard"),
   habitCardBody: document.getElementById("habitCardBody"),
@@ -896,15 +893,6 @@ function queueXpAnimation(type, id, amount) {
   pendingXpAnimation = amount > 0 ? { type, id, amount } : null;
 }
 
-function getAchievement() {
-  const hasHabit = Boolean(state.habit.name);
-  const total = state.missions.length + (hasHabit ? 1 : 0);
-  const completedMissions = state.missions.filter((mission) => mission.completed).length;
-  const completed = completedMissions + (hasHabit && state.habit.completedToday ? 1 : 0);
-  const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
-  return { total, completed, percentage };
-}
-
 function checkAndAwardAchievementBonus() {
   const isComplete = Boolean(
     state.habit.name &&
@@ -926,7 +914,6 @@ function checkAndAwardAchievementBonus() {
 function renderAll() {
   renderCurrentDate();
   renderLevel();
-  renderAchievement();
   renderHabit();
   renderMissions();
   renderTasks();
@@ -954,16 +941,6 @@ function renderLevel() {
   elements.levelRemainingText.textContent = `あと${remainingPoints}XPでLevel Up`;
   elements.totalPointText.textContent = `累計 ${state.totalPoints}XP`;
   setProgress(elements.levelProgress, percentage);
-}
-
-function renderAchievement() {
-  const achievement = getAchievement();
-  elements.achievementText.textContent = String(achievement.percentage);
-  elements.achievementDetail.textContent =
-    achievement.total === 0
-      ? "対象項目はまだありません"
-      : `${achievement.completed} / ${achievement.total}件 達成`;
-  setProgress(elements.achievementProgress, achievement.percentage);
 }
 
 function setProgress(element, percentage) {

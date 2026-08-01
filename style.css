@@ -7,6 +7,8 @@
   --color-soft: #f6f7f4;
   --color-primary: #437767;
   --color-primary-soft: #e8f1ed;
+  --color-garden-surface: #edf6f0;
+  --color-garden-border: #d5e7dc;
   --color-progress: #3b82f6;
   --color-danger: #ad342b;
   --radius-card: 16px;
@@ -253,7 +255,12 @@ input[type="checkbox"] {
   padding-bottom: 6px;
 }
 
-.progress-card { padding-top: 15px; padding-bottom: 15px; }
+.progress-card {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  background: var(--color-garden-surface);
+  border-color: var(--color-garden-border);
+}
 
 .action-menu { position: relative; flex: 0 0 auto; }
 .action-menu summary {
@@ -316,27 +323,14 @@ input[type="checkbox"] {
 }
 .error-message:empty { display: none; }
 .level-number { font-size: 26px; }
-.progress-summary {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 12px;
-}
-.progress-summary-label { display: block; margin-bottom: 2px; color: var(--color-muted); font-size: 12px; }
-.achievement-value { display: inline-flex; align-items: baseline; font-size: 27px; line-height: 1; }
-.achievement-unit { margin-left: 2px; font-size: 16px; }
-.progress-detail { margin: 0; text-align: right; }
 .progress-track { height: 8px; overflow: hidden; background: #e8ebe6; border-radius: 999px; }
-.achievement-track { margin-top: 7px; }
 .progress-bar { width: 0; height: 100%; border-radius: inherit; transition: width .25s ease; }
-.achievement-bar { background: var(--color-primary); }
 .level-bar { background: var(--color-progress); }
-.progress-label { margin: 12px 0 6px; color: var(--color-muted); font-size: 12px; }
-.total-xp { margin: 6px 0 0; }
+.progress-label { margin: 9px 0 5px; color: var(--color-muted); font-size: 12px; }
+.total-xp { margin: 5px 0 0; }
 .xp-details {
-  margin-top: 10px;
-  padding-top: 9px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--color-border);
 }
 .xp-details summary {
@@ -417,8 +411,8 @@ input[type="checkbox"] {
   margin-bottom: 14px;
   padding: 18px var(--space-card);
   color: var(--color-text);
-  background: #edf6f0;
-  border: 1px solid #d5e7dc;
+  background: var(--color-garden-surface);
+  border: 1px solid var(--color-garden-border);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   text-align: left;
@@ -584,8 +578,6 @@ input[type="checkbox"] {
   body { padding: 18px 10px 40px; }
   .input-row { align-items: stretch; flex-direction: column; }
   .input-row button { width: 100%; }
-  .progress-summary { align-items: flex-end; flex-direction: row; gap: 10px; }
-  .progress-detail { text-align: right; }
   .progress-label { align-items: center; flex-direction: row; gap: 8px; }
   .streak-chip { font-size: 11px; }
   .garden-view { padding-right: 0; padding-left: 0; }
