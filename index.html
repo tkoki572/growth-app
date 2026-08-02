@@ -18,7 +18,7 @@
     <section id="habitCard" class="card habit-card" aria-labelledby="habitHeading">
       <div class="section-heading">
         <div>
-          <h2 id="habitHeading"><button id="habitCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="habitCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>Habit</button></h2>
+          <h2 id="habitHeading"><button id="habitCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="habitCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>Habit<span class="habit-title-context">毎日の習慣</span></button></h2>
         </div>
         <span id="habitCollapsedName" class="habit-collapsed-name"></span>
         <details id="habitMenu" class="action-menu" hidden>
@@ -30,7 +30,7 @@
         </details>
       </div>
       <div id="habitCardBody" class="collapsible-content">
-        <p class="card-subtitle">毎日の習慣</p>
+        <p class="card-subtitle">たった一つの積み重ね</p>
         <form id="habitForm" class="input-row">
           <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
           <button type="submit">登録</button>
@@ -46,14 +46,14 @@
     <section id="missionCard" class="card" aria-labelledby="missionHeading">
       <div class="section-heading">
         <div>
-          <h2 id="missionHeading"><button id="missionCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="missionCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>今日のMission</button></h2>
+          <h2 id="missionHeading"><button id="missionCollapseButton" class="card-collapse-button" type="button" aria-expanded="true" aria-controls="missionCardBody"><span class="collapse-icon" aria-hidden="true">▼</span>Mission</button></h2>
         </div>
         <span id="missionCount" class="count-text">0件完了</span>
       </div>
       <div id="missionCardBody" class="collapsible-content">
         <p class="card-subtitle">今日、少し前へ進めたいこと</p>
         <form id="missionForm" class="quick-add-form">
-          <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力してEnter" aria-label="Mission" enterkeyhint="done" autocomplete="off">
+          <input id="missionInput" type="text" maxlength="80" placeholder="Mission①を入力してEnter" aria-label="Mission①" enterkeyhint="done" autocomplete="off">
         </form>
         <p id="missionError" class="error-message" role="alert"></p>
         <ul id="missionList" class="item-list"></ul>
@@ -119,7 +119,7 @@
       <span class="garden-entry-mark" aria-hidden="true">🌱</span>
       <span class="garden-entry-copy">
         <strong>Growth Garden</strong>
-        <span>あなたの毎日が、<br>少しずつ育つ場所。</span>
+        <span>あなたの毎日が、<br>少しずつ育つ場所</span>
       </span>
       <span class="garden-entry-arrow" aria-hidden="true">›</span>
     </button>

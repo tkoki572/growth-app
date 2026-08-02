@@ -80,6 +80,13 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   text-align: left;
 }
 .card-collapse-button:hover { background: var(--color-soft); }
+.habit-title-context {
+  margin-left: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.habit-card.collapsed .habit-title-context { display: none; }
 .collapse-icon {
   display: inline-block;
   margin-right: 7px;

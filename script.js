@@ -971,6 +971,9 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
+  const nextMissionNumber = state.missions.length + 1;
+  elements.missionInput.placeholder = `Mission${["①", "②", "③"][nextMissionNumber - 1] || ""}を入力してEnter`;
+  elements.missionInput.setAttribute("aria-label", `Mission${nextMissionNumber}`);
   const completedCount = state.missions.filter((mission) => mission.completed).length;
   elements.missionCount.textContent = isMissionComplete()
     ? "すべて完了"
