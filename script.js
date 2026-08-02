@@ -212,6 +212,7 @@ handleDateChange();
 let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
 let todoCardExpanded = !isTodoComplete();
+let missionQuickAddOpen = false;
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -560,6 +561,7 @@ function openQuickAdd(type) {
   const form = isMission ? elements.missionForm : elements.taskForm;
   const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
   const input = isMission ? elements.missionInput : elements.taskInput;
+  if (isMission) missionQuickAddOpen = true;
   form.hidden = false;
   button.hidden = true;
   input.focus();
@@ -570,6 +572,7 @@ function closeQuickAdd(type) {
   const form = isMission ? elements.missionForm : elements.taskForm;
   const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
   const input = isMission ? elements.missionInput : elements.taskInput;
+  if (isMission) missionQuickAddOpen = false;
   form.hidden = true;
   button.hidden = isMission && state.missions.length >= XP_RULES.missionMaxCount;
   input.value = "";
@@ -979,8 +982,7 @@ function renderMissions() {
     ? "すべて完了"
     : `${completedCount}件完了`;
   const isFull = state.missions.length >= XP_RULES.missionMaxCount;
-  if (state.missions.length === 0) elements.missionForm.hidden = false;
-  else if (isFull) elements.missionForm.hidden = true;
+  elements.missionForm.hidden = isFull || (state.missions.length > 0 && !missionQuickAddOpen);
   elements.missionOpenButton.hidden = isFull || !elements.missionForm.hidden;
 
   const sortedMissions = [...state.missions].sort(

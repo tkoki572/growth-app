@@ -87,6 +87,13 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   font-weight: 500;
 }
 .habit-card.collapsed .habit-title-context { display: none; }
+.habit-collapsed-subtitle { display: none; }
+.habit-card.collapsed .habit-collapsed-subtitle {
+  display: block;
+  margin: 1px 0 0 27px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
 .collapse-icon {
   display: inline-block;
   margin-right: 7px;
