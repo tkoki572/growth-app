@@ -25,6 +25,7 @@
           <summary aria-label="習慣の操作">•••</summary>
           <div class="action-menu-panel">
             <button id="habitEditButton" type="button">編集</button>
+            <button id="habitThemeButton" type="button">テーマ変更</button>
             <button id="habitDeleteButton" class="danger-action" type="button">削除</button>
           </div>
         </details>
@@ -32,8 +33,19 @@
       <p class="habit-collapsed-subtitle">たった一つの積み重ね</p>
       <div id="habitCardBody" class="collapsible-content">
         <p class="card-subtitle">たった一つの積み重ね</p>
-        <form id="habitForm" class="input-row">
+        <form id="habitForm" class="habit-form">
           <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
+          <label class="habit-theme-field" for="habitThemeSelect">
+            <span>この習慣はどんな時間？</span>
+            <select id="habitThemeSelect">
+              <option value="balance">自分らしく続ける</option>
+              <option value="life">暮らしを整える</option>
+              <option value="body">体を育てる</option>
+              <option value="learning">学びを育てる</option>
+              <option value="mind">心を整える</option>
+              <option value="care">誰かを大切にする</option>
+            </select>
+          </label>
           <button type="submit">登録</button>
         </form>
         <label id="habitCheckLabel" class="check-row habit-row empty-row">
@@ -164,7 +176,7 @@
     </div>
     <section id="gardenLandscape" class="garden-landscape" aria-labelledby="gardenStageLabel">
       <div class="garden-scene-info">
-        <p><span>今日の景色</span><strong id="gardenStageLabel">はじまりの庭</strong></p>
+        <p><span id="gardenHabitThemeLabel">今日の景色</span><strong id="gardenStageLabel">はじまりの庭</strong></p>
         <p><span>積み重ね</span><strong id="gardenHabitDays">0日</strong></p>
       </div>
       <figure class="garden-scene" data-stage="1">
@@ -174,6 +186,10 @@
         <span class="garden-leaf garden-leaf-one" aria-hidden="true"></span>
         <span class="garden-leaf garden-leaf-two" aria-hidden="true"></span>
         <span class="garden-leaf garden-leaf-three" aria-hidden="true"></span>
+        <span class="garden-flower-layer" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="garden-path-layer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="garden-bird" aria-hidden="true"></span>
+        <span class="garden-butterfly" aria-hidden="true"></span>
       <div id="gardenImageFallback" class="garden-image-fallback" hidden>
         <span aria-hidden="true">🌱</span>
         <p>庭はゆっくり育っています。</p>
@@ -190,6 +206,25 @@
       <input id="editInput" type="text" maxlength="100" aria-labelledby="editDialogTitle">
       <div class="dialog-actions">
         <button id="editCancelButton" class="secondary-button" type="button">キャンセル</button>
+        <button type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="habitThemeDialog" class="edit-dialog habit-theme-dialog">
+    <form id="habitThemeForm" method="dialog">
+      <h2>Habitのテーマ</h2>
+      <p>この習慣は、どんな時間ですか？</p>
+      <select id="habitThemeDialogSelect">
+        <option value="balance">自分らしく続ける</option>
+        <option value="life">暮らしを整える</option>
+        <option value="body">体を育てる</option>
+        <option value="learning">学びを育てる</option>
+        <option value="mind">心を整える</option>
+        <option value="care">誰かを大切にする</option>
+      </select>
+      <div class="dialog-actions">
+        <button id="habitThemeCancelButton" class="secondary-button" type="button">キャンセル</button>
         <button type="submit">保存</button>
       </div>
     </form>

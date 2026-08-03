@@ -9,6 +9,14 @@ const XP_RULES = Object.freeze({
   completionBonus: 2,
   levelThreshold: 40
 });
+const HABIT_THEMES = Object.freeze({
+  balance: { label: "自分らしく続ける" },
+  life: { label: "暮らしを整える" },
+  body: { label: "体を育てる" },
+  learning: { label: "学びを育てる" },
+  mind: { label: "心を整える" },
+  care: { label: "誰かを大切にする" }
+});
 const GARDEN_THEMES = Object.freeze({
   consistency: {
     label: "積み重ね",
@@ -64,11 +72,12 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 10,
+    version: 11,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
       name: "",
+      theme: "balance",
       completedToday: false,
       streak: 0,
       lastCompletedDate: null,
@@ -123,10 +132,11 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 10,
+    version: 11,
     habit: {
       ...initialState.habit,
       ...savedHabit,
+      theme: HABIT_THEMES[savedHabit.theme] ? savedHabit.theme : "balance",
       streak: savedStreak,
       startedDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.startedDate || "")
         ? savedHabit.startedDate
@@ -247,6 +257,7 @@ const elements = {
   startGardenButton: document.getElementById("startGardenButton"),
   gardenSaveError: document.getElementById("gardenSaveError"),
   gardenThemeLabel: document.getElementById("gardenThemeLabel"),
+  gardenHabitThemeLabel: document.getElementById("gardenHabitThemeLabel"),
   gardenStageLabel: document.getElementById("gardenStageLabel"),
   gardenHabitDays: document.getElementById("gardenHabitDays"),
   gardenLandscape: document.getElementById("gardenLandscape"),
@@ -254,6 +265,10 @@ const elements = {
   gardenTreeImage: document.getElementById("gardenTreeImage"),
   gardenImageFallback: document.getElementById("gardenImageFallback"),
   gardenMessage: document.getElementById("gardenMessage"),
+  gardenFlowers: [...document.querySelectorAll(".garden-flower-layer i")],
+  gardenPathStones: [...document.querySelectorAll(".garden-path-layer i")],
+  gardenBird: document.querySelector(".garden-bird"),
+  gardenButterfly: document.querySelector(".garden-butterfly"),
   currentDate: document.getElementById("currentDate"),
   levelCard: document.getElementById("progressCard"),
   levelUpNotice: document.getElementById("levelUpNotice"),
@@ -269,8 +284,10 @@ const elements = {
   habitCollapseButton: document.getElementById("habitCollapseButton"),
   habitMenu: document.getElementById("habitMenu"),
   habitEditButton: document.getElementById("habitEditButton"),
+  habitThemeButton: document.getElementById("habitThemeButton"),
   habitDeleteButton: document.getElementById("habitDeleteButton"),
   habitInput: document.getElementById("habitInput"),
+  habitThemeSelect: document.getElementById("habitThemeSelect"),
   habitCheckbox: document.getElementById("habitCheckbox"),
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
@@ -302,6 +319,10 @@ const elements = {
   editDialogTitle: document.getElementById("editDialogTitle"),
   editInput: document.getElementById("editInput"),
   editCancelButton: document.getElementById("editCancelButton"),
+  habitThemeDialog: document.getElementById("habitThemeDialog"),
+  habitThemeForm: document.getElementById("habitThemeForm"),
+  habitThemeDialogSelect: document.getElementById("habitThemeDialogSelect"),
+  habitThemeCancelButton: document.getElementById("habitThemeCancelButton"),
   scheduleDialog: document.getElementById("scheduleDialog"),
   scheduleDialogTitle: document.getElementById("scheduleDialogTitle"),
   scheduleDateForm: document.getElementById("scheduleDateForm"),
@@ -377,7 +398,10 @@ function setUpEventListeners() {
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
   elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
+  elements.habitThemeButton.addEventListener("click", openHabitThemeDialog);
   elements.habitDeleteButton.addEventListener("click", deleteHabit);
+  elements.habitThemeForm.addEventListener("submit", saveHabitTheme);
+  elements.habitThemeCancelButton.addEventListener("click", () => elements.habitThemeDialog.close());
   elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
@@ -461,12 +485,25 @@ function renderThemeSelection() {
 }
 
 function getGardenStage(completedDays) {
-  if (completedDays >= 120) return 7;
-  if (completedDays >= 60) return 6;
-  if (completedDays >= 30) return 5;
-  if (completedDays >= 14) return 4;
-  if (completedDays >= 7) return 3;
-  if (completedDays >= 3) return 2;
+  if (completedDays >= 365) return 7;
+  if (completedDays >= 180) return 6;
+  if (completedDays >= 90) return 5;
+  if (completedDays >= 45) return 4;
+  if (completedDays >= 21) return 3;
+  if (completedDays >= 7) return 2;
+  return 1;
+}
+
+function getGardenGrowthProgress(completedDays) {
+  const days = Math.max(0, Number(completedDays) || 0);
+  const milestones = [0, 7, 21, 45, 90, 180, 365];
+  const opacity = [0, 0.08, 0.18, 0.32, 0.5, 0.72, 1];
+  for (let index = 1; index < milestones.length; index += 1) {
+    if (days <= milestones[index]) {
+      const ratio = (days - milestones[index - 1]) / (milestones[index] - milestones[index - 1]);
+      return opacity[index - 1] + (opacity[index] - opacity[index - 1]) * ratio;
+    }
+  }
   return 1;
 }
 
@@ -478,7 +515,7 @@ function renderGardenScreen() {
     return;
   }
   const stage = getGardenStage(state.habit.totalCompletedDays);
-  const growthOpacity = [0, 0.14, 0.3, 0.48, 0.66, 0.84, 1][stage - 1];
+  const growthOpacity = getGardenGrowthProgress(state.habit.totalCompletedDays);
   const stageLabels = [
     "はじまりの庭",
     "小さな芽吹き",
@@ -498,13 +535,27 @@ function renderGardenScreen() {
     "毎日の積み重ねが、\nあなただけの景色になりました。"
   ];
   elements.gardenThemeLabel.textContent = theme.label;
+  elements.gardenHabitThemeLabel.textContent = HABIT_THEMES[state.habit.theme].label;
   elements.gardenStageLabel.textContent = stageLabels[stage - 1];
   elements.gardenHabitDays.textContent = `${state.habit.totalCompletedDays}日`;
   elements.gardenLandscape.dataset.theme = themeId;
+  elements.gardenLandscape.dataset.habitTheme = state.habit.theme;
   elements.gardenLandscape.querySelector(".garden-scene").dataset.stage = String(stage);
   elements.gardenLandscape.style.setProperty("--garden-growth", String(growthOpacity));
   elements.gardenMessage.innerHTML = stageMessages[stage - 1].replace("\n", "<br>");
-  elements.gardenTreeImage.alt = `${state.habit.totalCompletedDays}日の積み重ねが映る、${stageLabels[stage - 1]}`;
+  const matureImage = themeId === "challenge"
+    ? "assets/garden/scenes/garden-mature-nara.webp"
+    : "assets/garden/scenes/garden-mature.webp";
+  if (!elements.gardenTreeImage.getAttribute("src").endsWith(matureImage)) {
+    elements.gardenTreeImage.src = matureImage;
+  }
+  elements.gardenTreeImage.alt = `${state.habit.totalCompletedDays}日の積み重ねが映る、${theme.treeLabel}の${stageLabels[stage - 1]}`;
+  const completedMissions = state.missions.filter((mission) => mission.completed).length;
+  const completedTodos = getTodayTasks().filter((task) => task.completed).length;
+  elements.gardenFlowers.forEach((flower, index) => flower.classList.toggle("visible", index < completedMissions));
+  elements.gardenPathStones.forEach((stone, index) => stone.classList.toggle("visible", index < completedTodos));
+  elements.gardenBird.classList.toggle("visible", state.habit.totalCompletedDays >= 45);
+  elements.gardenButterfly.classList.toggle("visible", state.habit.totalCompletedDays >= 90);
   elements.gardenImageFallback.hidden = true;
   elements.gardenBaseImage.hidden = false;
   elements.gardenTreeImage.hidden = false;
@@ -604,12 +655,32 @@ function saveHabitName(event) {
   }
 
   state.habit.name = name;
+  state.habit.theme = HABIT_THEMES[elements.habitThemeSelect.value]
+    ? elements.habitThemeSelect.value
+    : "balance";
   state.habit.startedDate = getLocalDateString();
   state.habit.streak = 0;
   state.habit.lastCompletedDate = null;
   elements.habitInput.value = "";
   saveState();
   renderAll();
+}
+
+function openHabitThemeDialog() {
+  elements.habitMenu.open = false;
+  elements.habitThemeDialogSelect.value = state.habit.theme;
+  elements.habitThemeDialog.showModal();
+  elements.habitThemeDialogSelect.focus();
+}
+
+function saveHabitTheme(event) {
+  event.preventDefault();
+  const theme = elements.habitThemeDialogSelect.value;
+  if (!HABIT_THEMES[theme]) return;
+  state.habit.theme = theme;
+  saveState();
+  renderAll();
+  elements.habitThemeDialog.close();
 }
 
 function openQuickAdd(type) {
@@ -1048,6 +1119,7 @@ function renderHabit() {
       ? `継続 ${state.habit.streak}日目 🔥`
       : "今日からスタート 🌱";
   elements.habitForm.hidden = hasHabit;
+  elements.habitThemeSelect.value = state.habit.theme;
   elements.habitMenu.hidden = !hasHabit;
 }
 
