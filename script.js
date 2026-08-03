@@ -64,7 +64,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 9,
+    version: 10,
     lastUsedDate: getLocalDateString(),
     totalPoints: 0,
     habit: {
@@ -72,7 +72,9 @@ function createInitialState() {
       completedToday: false,
       streak: 0,
       lastCompletedDate: null,
-      pointAwardDates: []
+      startedDate: null,
+      pointAwardDates: [],
+      totalCompletedDays: 0
     },
     missions: [],
     tasks: [],
@@ -106,12 +108,36 @@ function mergeState(savedState) {
   const savedGarden = savedState?.growthGarden && typeof savedState.growthGarden === "object"
     ? savedState.growthGarden
     : {};
+  const savedHabitDates = Array.isArray(savedHabit.pointAwardDates)
+    ? [...new Set(savedHabit.pointAwardDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort()
+    : [];
+  const savedGardenDates = Array.isArray(savedGarden.countedDates)
+    ? [...new Set(savedGarden.countedDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort()
+    : [];
+  const knownHabitDates = new Set([...savedHabitDates, ...savedGardenDates]);
+  const savedStreak = Math.max(0, Number(savedHabit.streak) || 0);
+  const inferredStartedDate = savedHabit.name && savedStreak > 0 && /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.lastCompletedDate || "")
+    ? addDaysToDateString(savedHabit.lastCompletedDate, -(savedStreak - 1))
+    : savedHabit.name ? getLocalDateString() : null;
 
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 9,
-    habit: { ...initialState.habit, ...savedHabit },
+    version: 10,
+    habit: {
+      ...initialState.habit,
+      ...savedHabit,
+      streak: savedStreak,
+      startedDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.startedDate || "")
+        ? savedHabit.startedDate
+        : inferredStartedDate,
+      pointAwardDates: savedHabitDates,
+      totalCompletedDays: Math.max(
+        Number(savedHabit.totalCompletedDays) || 0,
+        knownHabitDates.size,
+        savedStreak
+      )
+    },
     daily: {
       ...initialState.daily,
       ...savedDaily,
@@ -157,9 +183,7 @@ function mergeState(savedState) {
       selectedTheme: GARDEN_THEMES[savedGarden.selectedTheme]
         ? savedGarden.selectedTheme
         : null,
-      countedDates: Array.isArray(savedGarden.countedDates)
-        ? [...new Set(savedGarden.countedDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)))].sort()
-        : []
+      countedDates: savedGardenDates
     }
   };
 }
@@ -235,6 +259,7 @@ const elements = {
   levelRemainingText: document.getElementById("levelRemainingText"),
   levelProgress: document.getElementById("levelProgress"),
   totalPointText: document.getElementById("totalPointText"),
+  totalHabitDays: document.getElementById("totalHabitDays"),
   habitForm: document.getElementById("habitForm"),
   habitCard: document.getElementById("habitCard"),
   habitCardBody: document.getElementById("habitCardBody"),
@@ -452,7 +477,7 @@ function renderGardenScreen() {
     window.location.hash = "garden-theme";
     return;
   }
-  const stage = getGardenStage(state.growthGarden.countedDates.length);
+  const stage = getGardenStage(state.habit.totalCompletedDays);
   const stageDescriptions = ["土", "小さな芽", "双葉", "苗", "小さな若木", "大きな若木", "成熟した木"];
   elements.gardenThemeLabel.textContent = theme.label;
   elements.gardenTreeLabel.textContent = theme.treeLabel;
@@ -551,6 +576,9 @@ function saveHabitName(event) {
   }
 
   state.habit.name = name;
+  state.habit.startedDate = getLocalDateString();
+  state.habit.streak = 0;
+  state.habit.lastCompletedDate = null;
   elements.habitInput.value = "";
   saveState();
   renderAll();
@@ -614,7 +642,15 @@ function saveEditedItem(event) {
   const value = elements.editInput.value.trim();
   if (!value || !editContext) return;
   if (editContext.type === "habit") {
-    state.habit.name = value;
+    if (value !== state.habit.name) {
+      state.habit.name = value;
+      state.habit.completedToday = false;
+      state.habit.streak = 0;
+      state.habit.lastCompletedDate = null;
+      state.habit.startedDate = getLocalDateString();
+      habitCardExpanded = true;
+      checkAndAwardAchievementBonus();
+    }
   } else {
     const collection = editContext.type === "mission" ? state.missions : state.tasks;
     const item = collection.find((entry) => entry.id === editContext.id);
@@ -683,10 +719,18 @@ function isFutureTask(task, today = getLocalDateString()) {
 }
 
 function deleteHabit() {
-  if (state.habit.pointAwardDates.includes(getLocalDateString())) {
+  const today = getLocalDateString();
+  const pointDateIndex = state.habit.pointAwardDates.indexOf(today);
+  if (pointDateIndex >= 0) {
     removePoints(XP_RULES.habit);
+    state.habit.pointAwardDates.splice(pointDateIndex, 1);
+    state.habit.totalCompletedDays = Math.max(0, state.habit.totalCompletedDays - 1);
   }
-  state.habit = { ...createInitialState().habit };
+  const habitHistory = {
+    pointAwardDates: [...state.habit.pointAwardDates],
+    totalCompletedDays: state.habit.totalCompletedDays
+  };
+  state.habit = { ...createInitialState().habit, ...habitHistory };
   syncGardenHabitDate(false);
   habitCardExpanded = true;
   elements.habitMenu.open = false;
@@ -714,12 +758,14 @@ function toggleHabit() {
 
     if (!state.habit.pointAwardDates.includes(today)) {
       state.habit.pointAwardDates.push(today);
+      state.habit.totalCompletedDays += 1;
       addPoints(XP_RULES.habit);
     }
   } else {
     const pointDateIndex = state.habit.pointAwardDates.indexOf(today);
     if (pointDateIndex >= 0) {
       state.habit.pointAwardDates.splice(pointDateIndex, 1);
+      state.habit.totalCompletedDays = Math.max(0, state.habit.totalCompletedDays - 1);
       removePoints(XP_RULES.habit);
     }
   }
@@ -944,6 +990,7 @@ function renderLevel() {
   elements.pointText.textContent = `${currentLevelPoints} / ${XP_RULES.levelThreshold}XP`;
   elements.levelRemainingText.textContent = `あと${remainingPoints}XPでLevel Up`;
   elements.totalPointText.textContent = `累計 ${state.totalPoints}XP`;
+  elements.totalHabitDays.textContent = `${state.habit.totalCompletedDays}日`;
   setProgress(elements.levelProgress, percentage);
 }
 
@@ -967,7 +1014,11 @@ function renderHabit() {
     "completed",
     hasHabit && state.habit.completedToday
   );
-  elements.habitStreak.textContent = `連続 ${state.habit.streak}日`;
+  elements.habitStreak.textContent = hasHabit && state.habit.startedDate === getLocalDateString()
+    ? "今日からスタート 🌱"
+    : state.habit.streak > 0
+      ? `継続 ${state.habit.streak}日目 🔥`
+      : "今日からスタート 🌱";
   elements.habitForm.hidden = hasHabit;
   elements.habitMenu.hidden = !hasHabit;
 }

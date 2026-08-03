@@ -339,6 +339,15 @@ input[type="checkbox"] {
 .level-bar { background: var(--color-progress); }
 .progress-label { margin: 9px 0 5px; color: var(--color-muted); font-size: 12px; }
 .total-xp { margin: 5px 0 0; }
+.habit-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.habit-total strong { color: var(--color-text); }
 .xp-details,
 .future-todos {
   margin-top: 8px;
