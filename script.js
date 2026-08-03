@@ -247,7 +247,10 @@ const elements = {
   startGardenButton: document.getElementById("startGardenButton"),
   gardenSaveError: document.getElementById("gardenSaveError"),
   gardenThemeLabel: document.getElementById("gardenThemeLabel"),
-  gardenTreeLabel: document.getElementById("gardenTreeLabel"),
+  gardenStageLabel: document.getElementById("gardenStageLabel"),
+  gardenHabitDays: document.getElementById("gardenHabitDays"),
+  gardenLandscape: document.getElementById("gardenLandscape"),
+  gardenBaseImage: document.getElementById("gardenBaseImage"),
   gardenTreeImage: document.getElementById("gardenTreeImage"),
   gardenImageFallback: document.getElementById("gardenImageFallback"),
   gardenMessage: document.getElementById("gardenMessage"),
@@ -364,6 +367,8 @@ function setUpEventListeners() {
     button.addEventListener("click", () => { window.location.hash = ""; });
   });
   window.addEventListener("hashchange", renderAppRoute);
+  elements.gardenBaseImage.addEventListener("error", showGardenImageFallback);
+  elements.gardenBaseImage.addEventListener("load", hideGardenImageFallback);
   elements.gardenTreeImage.addEventListener("error", showGardenImageFallback);
   elements.gardenTreeImage.addEventListener("load", hideGardenImageFallback);
   elements.habitCollapseButton.addEventListener("click", () => toggleCard("habit"));
@@ -465,11 +470,6 @@ function getGardenStage(completedDays) {
   return 1;
 }
 
-function getGardenAssetPath(themeId, stage) {
-  if (stage === 1) return "assets/garden/common/stage-1.svg";
-  return `assets/garden/${GARDEN_THEMES[themeId].treeId}/stage-${stage}.svg`;
-}
-
 function renderGardenScreen() {
   const themeId = state.growthGarden.selectedTheme;
   const theme = GARDEN_THEMES[themeId];
@@ -478,14 +478,36 @@ function renderGardenScreen() {
     return;
   }
   const stage = getGardenStage(state.habit.totalCompletedDays);
-  const stageDescriptions = ["土", "小さな芽", "双葉", "苗", "小さな若木", "大きな若木", "成熟した木"];
+  const growthOpacity = [0, 0.14, 0.3, 0.48, 0.66, 0.84, 1][stage - 1];
+  const stageLabels = [
+    "はじまりの庭",
+    "小さな芽吹き",
+    "緑が広がる庭",
+    "花の気配",
+    "木陰が生まれた庭",
+    "灯りのある庭",
+    "気付いたら、豊かな庭"
+  ];
+  const stageMessages = [
+    "まだ小さな景色も、\n今日の一歩から始まります。",
+    "土のそばに、\n新しい緑が見えはじめました。",
+    "少しずつ、庭に\nやわらかな緑が広がっています。",
+    "積み重ねのそばに、\n小さな花が咲きはじめました。",
+    "育った木が、\n静かな木陰をつくっています。",
+    "帰ってこられる場所に、\nあたたかな灯りがともりました。",
+    "毎日の積み重ねが、\nあなただけの景色になりました。"
+  ];
   elements.gardenThemeLabel.textContent = theme.label;
-  elements.gardenTreeLabel.textContent = theme.treeLabel;
-  elements.gardenMessage.innerHTML = theme.message.replace("\n", "<br>");
-  elements.gardenTreeImage.alt = `${theme.label}を表す、${stageDescriptions[stage - 1]}の${theme.treeLabel}`;
+  elements.gardenStageLabel.textContent = stageLabels[stage - 1];
+  elements.gardenHabitDays.textContent = `${state.habit.totalCompletedDays}日`;
+  elements.gardenLandscape.dataset.theme = themeId;
+  elements.gardenLandscape.querySelector(".garden-scene").dataset.stage = String(stage);
+  elements.gardenLandscape.style.setProperty("--garden-growth", String(growthOpacity));
+  elements.gardenMessage.innerHTML = stageMessages[stage - 1].replace("\n", "<br>");
+  elements.gardenTreeImage.alt = `${state.habit.totalCompletedDays}日の積み重ねが映る、${stageLabels[stage - 1]}`;
   elements.gardenImageFallback.hidden = true;
+  elements.gardenBaseImage.hidden = false;
   elements.gardenTreeImage.hidden = false;
-  elements.gardenTreeImage.src = getGardenAssetPath(themeId, stage);
 }
 
 function syncGardenHabitDate(isCompleted) {
@@ -501,11 +523,17 @@ function syncGardenHabitDate(isCompleted) {
 }
 
 function showGardenImageFallback() {
+  elements.gardenBaseImage.hidden = true;
   elements.gardenTreeImage.hidden = true;
   elements.gardenImageFallback.hidden = false;
 }
 
 function hideGardenImageFallback() {
+  if (
+    !elements.gardenBaseImage.complete || elements.gardenBaseImage.naturalWidth === 0 ||
+    !elements.gardenTreeImage.complete || elements.gardenTreeImage.naturalWidth === 0
+  ) return;
+  elements.gardenBaseImage.hidden = false;
   elements.gardenTreeImage.hidden = false;
   elements.gardenImageFallback.hidden = true;
 }

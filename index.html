@@ -154,20 +154,34 @@
   </main>
 
   <main id="gardenView" class="garden-view app-view" hidden>
-    <button class="garden-back-button" type="button" data-garden-back>‹ ホーム</button>
-    <header class="garden-screen-header">
-      <p class="garden-eyebrow">Growth Garden</p>
-      <h1 id="gardenThemeLabel">積み重ね</h1>
-      <p id="gardenTreeLabel" class="garden-tree-label">ケヤキ</p>
-    </header>
-    <figure class="garden-scene">
-      <img id="gardenTreeImage" src="" alt="" decoding="async">
+    <div class="garden-topbar">
+      <button class="garden-back-button" type="button" data-garden-back>‹ ホーム</button>
+      <header class="garden-screen-header">
+        <p class="garden-eyebrow">Growth Garden</p>
+        <h1 id="gardenThemeLabel">積み重ね</h1>
+        <p>あなたの毎日が、景色になっています</p>
+      </header>
+    </div>
+    <section id="gardenLandscape" class="garden-landscape" aria-labelledby="gardenStageLabel">
+      <div class="garden-scene-info">
+        <p><span>今日の景色</span><strong id="gardenStageLabel">はじまりの庭</strong></p>
+        <p><span>積み重ね</span><strong id="gardenHabitDays">0日</strong></p>
+      </div>
+      <figure class="garden-scene" data-stage="1">
+        <img id="gardenBaseImage" class="garden-scene-image garden-scene-early" src="assets/garden/scenes/garden-early.webp" alt="" decoding="async">
+        <img id="gardenTreeImage" class="garden-scene-image garden-scene-mature" src="assets/garden/scenes/garden-mature.webp" alt="" decoding="async">
+        <span class="garden-light" aria-hidden="true"></span>
+        <span class="garden-leaf garden-leaf-one" aria-hidden="true"></span>
+        <span class="garden-leaf garden-leaf-two" aria-hidden="true"></span>
+        <span class="garden-leaf garden-leaf-three" aria-hidden="true"></span>
       <div id="gardenImageFallback" class="garden-image-fallback" hidden>
         <span aria-hidden="true">🌱</span>
         <p>庭はゆっくり育っています。</p>
       </div>
-    </figure>
-    <p id="gardenMessage" class="garden-message">毎日の小さな一歩が、<br>静かに積み重なっています。</p>
+        <figcaption id="gardenMessage" class="garden-message">毎日の小さな一歩が、<br>静かに積み重なっています。</figcaption>
+      </figure>
+    </section>
+    <p class="garden-afterword">今日も、少し前へ進めた。</p>
   </main>
 
   <dialog id="editDialog" class="edit-dialog">
