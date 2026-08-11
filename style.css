@@ -41,21 +41,35 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   margin: 0 auto;
 }
 
-.app-header { padding: 10px 4px 22px; }
+.app-header { padding: 8px 4px 20px; }
+.header-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
 .eyebrow {
-  margin: 0 0 6px;
+  margin: 0;
+  color: var(--color-primary);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .18em;
 }
 .current-date {
-  margin: 0 0 8px;
+  flex: 0 0 auto;
+  margin: 0;
   color: var(--color-muted);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 400;
 }
 h1 { margin: 0; font-size: clamp(25px, 7vw, 34px); line-height: 1.3; }
-.app-header > p:last-child { margin: 8px 0 0; color: var(--color-muted); }
+.header-subcopy {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 400;
+}
 
 .card {
   position: relative;
