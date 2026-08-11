@@ -1,5 +1,7 @@
 const STORAGE_KEY = "selfGrowthAppState";
 const OLD_TODO_STORAGE_KEY = "todos";
+// 公開再開時は true に戻すだけで、保存済みのGardenと画面を再表示できます。
+const GROWTH_GARDEN_ENABLED = false;
 const XP_RULES = Object.freeze({
   habit: 5,
   missionByOrder: Object.freeze([2, 2, 4]),
@@ -330,6 +332,7 @@ const elements = {
   scheduleCancelButton: document.getElementById("scheduleCancelButton")
 };
 
+applyFeatureVisibility();
 setUpEventListeners();
 renderAll();
 renderAppRoute();
@@ -417,7 +420,12 @@ function setUpEventListeners() {
   document.addEventListener("click", closeMenusFromOutside);
 }
 
+function applyFeatureVisibility() {
+  elements.gardenEntryButton.hidden = !GROWTH_GARDEN_ENABLED;
+}
+
 function openGrowthGarden() {
+  if (!GROWTH_GARDEN_ENABLED) return;
   window.location.hash = state.growthGarden.selectedTheme ? "garden" : "garden-theme";
 }
 
@@ -460,6 +468,10 @@ function startGrowthGarden() {
 function renderAppRoute() {
   const themeIsValid = Boolean(GARDEN_THEMES[state.growthGarden.selectedTheme]);
   let route = window.location.hash.replace("#", "");
+  if (!GROWTH_GARDEN_ENABLED && new Set(["garden", "garden-theme"]).has(route)) {
+    route = "home";
+    history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  }
   if (route === "garden" && !themeIsValid) route = "garden-theme";
   if (route === "garden-theme" && themeIsValid) route = "garden";
   if (!new Set(["garden", "garden-theme"]).has(route)) route = "home";
