@@ -1172,7 +1172,7 @@ function renderLevel() {
   elements.pointText.textContent = `${currentLevelPoints} / ${XP_RULES.levelThreshold}XP`;
   elements.levelRemainingText.textContent = `あと${remainingPoints}XPでLevel Up`;
   elements.totalPointText.textContent = `累計 ${state.totalPoints}XP`;
-  elements.totalHabitDays.textContent = `${state.habit.totalCompletedDays}日`;
+  elements.totalHabitDays.textContent = `累計${state.habit.totalCompletedDays}日`;
   setProgress(elements.levelProgress, percentage);
 }
 
@@ -1202,7 +1202,9 @@ function renderHabit() {
       ? `継続 ${state.habit.streak}日目 🔥`
       : "今日からスタート 🌱";
   elements.habitStreak.textContent = streakText;
-  elements.habitCollapsedStreak.textContent = hasHabit ? streakText : "";
+  elements.habitCollapsedStreak.textContent = hasHabit && state.habit.completedToday
+    ? `継続 ${Math.max(1, state.habit.streak)}日目 完了`
+    : "";
   elements.habitForm.hidden = hasHabit;
   elements.habitThemeSelect.value = state.habit.theme;
   elements.habitMenu.hidden = !hasHabit;
