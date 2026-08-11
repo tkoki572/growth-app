@@ -87,12 +87,26 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   font-weight: 500;
 }
 .habit-card.collapsed .habit-title-context { display: none; }
-.habit-collapsed-subtitle { display: none; }
-.habit-card.collapsed .habit-collapsed-subtitle {
-  display: block;
+.habit-collapsed-meta { display: none; }
+.habit-card.collapsed .habit-collapsed-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin: 1px 0 0 27px;
+}
+.habit-collapsed-subtitle {
+  min-width: 0;
+  margin: 0;
   color: var(--color-muted);
   font-size: 13px;
+}
+.habit-collapsed-streak {
+  flex: 0 0 auto;
+  color: #5f7467;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .collapse-icon {
   display: inline-block;
@@ -442,6 +456,13 @@ input[type="checkbox"] {
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .secondary-button { color: var(--color-text); background: var(--color-soft); }
 .secondary-button:hover { background: #e8ebe6; }
+.daily-mission-dialog h2 { font-size: 20px; }
+.daily-mission-dialog form > p { margin: 6px 0 15px; color: var(--color-muted); font-size: 13px; }
+.daily-mission-inputs { display: grid; gap: 8px; }
+.daily-mission-dialog .daily-mission-inputs input { margin-top: 0; }
+.daily-mission-dialog .add-trigger { min-height: 36px; margin-top: 8px; }
+.daily-mission-actions { display: grid; grid-template-columns: 1fr 1fr; }
+.daily-mission-actions button { width: 100%; }
 
 .garden-entry-card {
   display: grid;

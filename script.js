@@ -74,8 +74,9 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 11,
+    version: 12,
     lastUsedDate: getLocalDateString(),
+    missionPromptHandledDate: null,
     totalPoints: 0,
     habit: {
       name: "",
@@ -134,7 +135,10 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 11,
+    version: 12,
+    missionPromptHandledDate: /^\d{4}-\d{2}-\d{2}$/.test(savedState?.missionPromptHandledDate || "")
+      ? savedState.missionPromptHandledDate
+      : null,
     habit: {
       ...initialState.habit,
       ...savedHabit,
@@ -294,6 +298,7 @@ const elements = {
   habitCheckLabel: document.getElementById("habitCheckLabel"),
   habitName: document.getElementById("habitName"),
   habitCollapsedName: document.getElementById("habitCollapsedName"),
+  habitCollapsedStreak: document.getElementById("habitCollapsedStreak"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
   missionCard: document.getElementById("missionCard"),
@@ -325,6 +330,12 @@ const elements = {
   habitThemeForm: document.getElementById("habitThemeForm"),
   habitThemeDialogSelect: document.getElementById("habitThemeDialogSelect"),
   habitThemeCancelButton: document.getElementById("habitThemeCancelButton"),
+  dailyMissionDialog: document.getElementById("dailyMissionDialog"),
+  dailyMissionForm: document.getElementById("dailyMissionForm"),
+  dailyMissionInputs: document.getElementById("dailyMissionInputs"),
+  dailyMissionAddButton: document.getElementById("dailyMissionAddButton"),
+  dailyMissionLaterButton: document.getElementById("dailyMissionLaterButton"),
+  dailyMissionSaveButton: document.getElementById("dailyMissionSaveButton"),
   scheduleDialog: document.getElementById("scheduleDialog"),
   scheduleDialogTitle: document.getElementById("scheduleDialogTitle"),
   scheduleDateForm: document.getElementById("scheduleDateForm"),
@@ -336,6 +347,7 @@ applyFeatureVisibility();
 setUpEventListeners();
 renderAll();
 renderAppRoute();
+showDailyMissionPromptIfNeeded();
 window.setInterval(() => {
   const beforeDate = state.lastUsedDate;
   handleDateChange();
@@ -405,6 +417,10 @@ function setUpEventListeners() {
   elements.habitDeleteButton.addEventListener("click", deleteHabit);
   elements.habitThemeForm.addEventListener("submit", saveHabitTheme);
   elements.habitThemeCancelButton.addEventListener("click", () => elements.habitThemeDialog.close());
+  elements.dailyMissionForm.addEventListener("submit", saveDailyMissions);
+  elements.dailyMissionAddButton.addEventListener("click", addDailyMissionInput);
+  elements.dailyMissionLaterButton.addEventListener("click", dismissDailyMissionPrompt);
+  elements.dailyMissionInputs.addEventListener("input", updateDailyMissionPrompt);
   elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
@@ -422,6 +438,57 @@ function setUpEventListeners() {
 
 function applyFeatureVisibility() {
   elements.gardenEntryButton.hidden = !GROWTH_GARDEN_ENABLED;
+}
+
+function showDailyMissionPromptIfNeeded() {
+  const today = getLocalDateString();
+  if (state.missionPromptHandledDate === today) return;
+  state.missionPromptHandledDate = today;
+  saveState();
+  if (state.missions.length > 0) return;
+  elements.dailyMissionInputs.innerHTML = "";
+  addDailyMissionInput();
+  elements.dailyMissionDialog.showModal();
+  elements.dailyMissionInputs.querySelector("input").focus();
+}
+
+function addDailyMissionInput() {
+  const inputCount = elements.dailyMissionInputs.querySelectorAll("input").length;
+  if (inputCount >= XP_RULES.missionMaxCount) return;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.maxLength = 80;
+  input.placeholder = inputCount === 0 ? "Missionを入力" : `Mission${["①", "②", "③"][inputCount]}`;
+  input.setAttribute("aria-label", `Mission${inputCount + 1}`);
+  input.autocomplete = "off";
+  elements.dailyMissionInputs.appendChild(input);
+  updateDailyMissionPrompt();
+  if (inputCount > 0) input.focus();
+}
+
+function updateDailyMissionPrompt() {
+  const inputs = [...elements.dailyMissionInputs.querySelectorAll("input")];
+  elements.dailyMissionAddButton.hidden = inputs.length >= XP_RULES.missionMaxCount;
+  elements.dailyMissionSaveButton.disabled = !inputs.some((input) => input.value.trim());
+}
+
+function dismissDailyMissionPrompt() {
+  elements.dailyMissionDialog.close();
+}
+
+function saveDailyMissions(event) {
+  event.preventDefault();
+  const texts = [...elements.dailyMissionInputs.querySelectorAll("input")]
+    .map((input) => input.value.trim())
+    .filter(Boolean)
+    .slice(0, XP_RULES.missionMaxCount - state.missions.length);
+  if (texts.length === 0) return;
+  texts.forEach((text) => state.missions.push(createMissionEntry(text)));
+  missionCardExpanded = true;
+  checkAndAwardAchievementBonus();
+  saveState();
+  renderAll();
+  elements.dailyMissionDialog.close();
 }
 
 function openGrowthGarden() {
@@ -916,19 +983,23 @@ function addMission(event) {
     return;
   }
 
-  state.missions.push({
-    id: createId(),
-    text,
-    completed: false,
-    pointAwarded: false,
-    xpAwarded: 0
-  });
+  state.missions.push(createMissionEntry(text));
   missionCardExpanded = true;
   checkAndAwardAchievementBonus();
   elements.missionError.textContent = "";
   closeQuickAdd("mission");
   saveState();
   renderAll();
+}
+
+function createMissionEntry(text) {
+  return {
+    id: createId(),
+    text,
+    completed: false,
+    pointAwarded: false,
+    xpAwarded: 0
+  };
 }
 
 function toggleMission(id) {
@@ -1125,11 +1196,13 @@ function renderHabit() {
     "completed",
     hasHabit && state.habit.completedToday
   );
-  elements.habitStreak.textContent = hasHabit && state.habit.startedDate === getLocalDateString()
+  const streakText = hasHabit && state.habit.startedDate === getLocalDateString()
     ? "今日からスタート 🌱"
     : state.habit.streak > 0
       ? `継続 ${state.habit.streak}日目 🔥`
       : "今日からスタート 🌱";
+  elements.habitStreak.textContent = streakText;
+  elements.habitCollapsedStreak.textContent = hasHabit ? streakText : "";
   elements.habitForm.hidden = hasHabit;
   elements.habitThemeSelect.value = state.habit.theme;
   elements.habitMenu.hidden = !hasHabit;

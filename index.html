@@ -30,7 +30,10 @@
           </div>
         </details>
       </div>
-      <p class="habit-collapsed-subtitle">たった一つの積み重ね</p>
+      <div class="habit-collapsed-meta">
+        <p class="habit-collapsed-subtitle">たった一つの積み重ね</p>
+        <span id="habitCollapsedStreak" class="habit-collapsed-streak"></span>
+      </div>
       <div id="habitCardBody" class="collapsible-content">
         <p class="card-subtitle">たった一つの積み重ね</p>
         <form id="habitForm" class="habit-form">
@@ -226,6 +229,19 @@
       <div class="dialog-actions">
         <button id="habitThemeCancelButton" class="secondary-button" type="button">キャンセル</button>
         <button type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dailyMissionDialog" class="edit-dialog daily-mission-dialog">
+    <form id="dailyMissionForm" method="dialog">
+      <h2>今日、少し前へ進めたいことは？</h2>
+      <p>今日のMissionを決めてみましょう</p>
+      <div id="dailyMissionInputs" class="daily-mission-inputs"></div>
+      <button id="dailyMissionAddButton" class="add-trigger" type="button">＋追加</button>
+      <div class="dialog-actions daily-mission-actions">
+        <button id="dailyMissionLaterButton" class="secondary-button" type="button">あとで</button>
+        <button id="dailyMissionSaveButton" type="submit" disabled>決定</button>
       </div>
     </form>
   </dialog>
