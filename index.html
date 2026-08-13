@@ -9,9 +9,12 @@
 <body>
   <main id="homeView" class="app app-view">
     <header class="app-header">
-      <div class="header-meta">
-        <p class="eyebrow">SELF GROWTH</p>
-        <p id="currentDate" class="current-date"></p>
+      <div class="header-topline">
+        <div>
+          <p class="app-name">Growth App</p>
+          <p id="currentDate" class="current-date"></p>
+        </div>
+        <button id="helpButton" class="help-button" type="button" aria-label="Growth Appの使い方">？</button>
       </div>
       <h1>昨日の自分より、少し前へ。</h1>
       <p class="header-subcopy">小さな達成を積み重ねよう。</p>
@@ -27,7 +30,7 @@
           <summary aria-label="習慣の操作">•••</summary>
           <div class="action-menu-panel">
             <button id="habitEditButton" type="button">編集</button>
-            <button id="habitThemeButton" type="button">テーマ変更</button>
+            <button id="habitThemeButton" type="button" hidden>テーマ変更</button>
             <button id="habitDeleteButton" class="danger-action" type="button">削除</button>
           </div>
         </details>
@@ -40,7 +43,7 @@
         <p class="card-subtitle">たった一つの積み重ね</p>
         <form id="habitForm" class="habit-form">
           <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
-          <label class="habit-theme-field" for="habitThemeSelect">
+          <label class="habit-theme-field" for="habitThemeSelect" hidden>
             <span>この習慣はどんな時間？</span>
             <select id="habitThemeSelect">
               <option value="balance">自分らしく続ける</option>
@@ -246,6 +249,22 @@
         <button id="dailyMissionSaveButton" type="submit" disabled>決定</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="onboardingDialog" class="onboarding-dialog">
+    <section class="onboarding-panel" aria-live="polite">
+      <p id="onboardingProgress" class="onboarding-progress"></p>
+      <div id="onboardingContent"></div>
+    </section>
+  </dialog>
+
+  <dialog id="helpDialog" class="onboarding-dialog help-dialog">
+    <section class="onboarding-panel">
+      <h2>Growth Appの使い方</h2>
+      <p class="help-intro">昨日の自分より、少し前へ。<br>小さな達成を積み重ねよう。</p>
+      <div id="helpContent" class="help-content"></div>
+      <button id="helpCloseButton" class="onboarding-primary" type="button">閉じる</button>
+    </section>
   </dialog>
 
   <dialog id="scheduleDialog" class="edit-dialog schedule-dialog">

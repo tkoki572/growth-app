@@ -19,6 +19,26 @@ const HABIT_THEMES = Object.freeze({
   mind: { label: "心を整える" },
   care: { label: "誰かを大切にする" }
 });
+const GUIDE_CONTENT = Object.freeze({
+  habit: {
+    title: "Habit｜毎日の習慣",
+    lead: "毎日続けたい習慣を、ひとつ。",
+    description: "「毎日、これだけは必ず続ける」\nたった一つの習慣を決めましょう。",
+    example: "例：本を10分読む"
+  },
+  mission: {
+    title: "Mission",
+    lead: "今日、できたら嬉しいこと",
+    description: "Missionは必ずやらなきゃいけないことではありません。\n「これができたらちょっと自分を褒められるな」と思うことを、Missionにしてみましょう。",
+    example: "例：トイレを掃除する、ゴミを捨てる"
+  },
+  todo: {
+    title: "Todo",
+    lead: "いつかやること",
+    description: "今日じゃなくてもいいことは、Todoに残しておきましょう。",
+    example: "例：美容院を予約する、洗剤を買う"
+  }
+});
 const GARDEN_THEMES = Object.freeze({
   consistency: {
     label: "積み重ね",
@@ -74,9 +94,10 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 12,
+    version: 13,
     lastUsedDate: getLocalDateString(),
     missionPromptHandledDate: null,
+    tutorialCompleted: false,
     totalPoints: 0,
     habit: {
       name: "",
@@ -135,7 +156,10 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 12,
+    version: 13,
+    tutorialCompleted: typeof savedState?.tutorialCompleted === "boolean"
+      ? savedState.tutorialCompleted
+      : true,
     missionPromptHandledDate: /^\d{4}-\d{2}-\d{2}$/.test(savedState?.missionPromptHandledDate || "")
       ? savedState.missionPromptHandledDate
       : null,
@@ -231,6 +255,7 @@ function loadState() {
           visibleFrom: null,
           completedDate: null
         }));
+      if (initialState.tasks.length > 0) initialState.tutorialCompleted = true;
     }
   } catch (error) {
     console.warn("旧TODOデータは読み込めませんでした。", error);
@@ -251,8 +276,10 @@ let state = loadState();
 handleDateChange();
 let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
-let todoCardExpanded = !isTodoComplete();
+let todoCardExpanded = !canCollapseTodo();
 let missionQuickAddOpen = false;
+let onboardingStep = 0;
+let onboardingDraft = { habit: "", missions: [], todos: [] };
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -276,6 +303,7 @@ const elements = {
   gardenBird: document.querySelector(".garden-bird"),
   gardenButterfly: document.querySelector(".garden-butterfly"),
   currentDate: document.getElementById("currentDate"),
+  helpButton: document.getElementById("helpButton"),
   levelCard: document.getElementById("progressCard"),
   levelUpNotice: document.getElementById("levelUpNotice"),
   levelText: document.getElementById("levelText"),
@@ -336,6 +364,12 @@ const elements = {
   dailyMissionAddButton: document.getElementById("dailyMissionAddButton"),
   dailyMissionLaterButton: document.getElementById("dailyMissionLaterButton"),
   dailyMissionSaveButton: document.getElementById("dailyMissionSaveButton"),
+  onboardingDialog: document.getElementById("onboardingDialog"),
+  onboardingProgress: document.getElementById("onboardingProgress"),
+  onboardingContent: document.getElementById("onboardingContent"),
+  helpDialog: document.getElementById("helpDialog"),
+  helpContent: document.getElementById("helpContent"),
+  helpCloseButton: document.getElementById("helpCloseButton"),
   scheduleDialog: document.getElementById("scheduleDialog"),
   scheduleDialogTitle: document.getElementById("scheduleDialogTitle"),
   scheduleDateForm: document.getElementById("scheduleDateForm"),
@@ -347,14 +381,15 @@ applyFeatureVisibility();
 setUpEventListeners();
 renderAll();
 renderAppRoute();
-showDailyMissionPromptIfNeeded();
+if (state.tutorialCompleted) showDailyMissionPromptIfNeeded();
+else startOnboarding();
 window.setInterval(() => {
   const beforeDate = state.lastUsedDate;
   handleDateChange();
   if (state.lastUsedDate !== beforeDate) {
     habitCardExpanded = true;
     missionCardExpanded = true;
-    todoCardExpanded = true;
+    todoCardExpanded = !canCollapseTodo();
     renderAll();
   }
   else renderCurrentDate();
@@ -421,6 +456,9 @@ function setUpEventListeners() {
   elements.dailyMissionAddButton.addEventListener("click", addDailyMissionInput);
   elements.dailyMissionLaterButton.addEventListener("click", dismissDailyMissionPrompt);
   elements.dailyMissionInputs.addEventListener("input", updateDailyMissionPrompt);
+  elements.helpButton.addEventListener("click", openHelpDialog);
+  elements.helpCloseButton.addEventListener("click", () => elements.helpDialog.close());
+  elements.onboardingDialog.addEventListener("cancel", (event) => event.preventDefault());
   elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
@@ -450,6 +488,112 @@ function showDailyMissionPromptIfNeeded() {
   addDailyMissionInput();
   elements.dailyMissionDialog.showModal();
   elements.dailyMissionInputs.querySelector("input").focus();
+}
+
+function startOnboarding() {
+  onboardingStep = 0;
+  onboardingDraft = { habit: "", missions: [], todos: [] };
+  renderOnboardingStep();
+  elements.onboardingDialog.showModal();
+}
+
+function renderGuideCopy(key) {
+  const guide = GUIDE_CONTENT[key];
+  return `<h2>${guide.title}</h2><p class="onboarding-lead">${guide.lead}</p><p class="onboarding-description">${guide.description.replace("\n", "<br>")}</p><p class="onboarding-example">${guide.example}</p>`;
+}
+
+function renderOnboardingStep() {
+  const steps = ["Welcome", "Habit", "Mission", "Todo"];
+  elements.onboardingProgress.textContent = `${onboardingStep + 1} / ${steps.length}`;
+  if (onboardingStep === 0) {
+    elements.onboardingContent.innerHTML = `<div class="onboarding-welcome"><p class="onboarding-brand">Growth App</p><h2>昨日の自分より、少し前へ。</h2><p class="onboarding-lead">小さな達成を積み重ねよう。</p><p>Growth Appでは、<strong>Habit・Mission・Todo</strong>を使って、毎日の小さな達成を積み重ねていきます。</p><button class="onboarding-primary" type="button" data-onboarding-next>はじめる</button></div>`;
+  } else if (onboardingStep === 1) {
+    elements.onboardingContent.innerHTML = `${renderGuideCopy("habit")}<input class="onboarding-single-input" type="text" maxlength="50" placeholder="習慣を入力" aria-label="習慣を入力" value="${escapeAttribute(onboardingDraft.habit)}"><button class="onboarding-primary" type="button" data-onboarding-next disabled>次へ</button>`;
+  } else {
+    const key = onboardingStep === 2 ? "mission" : "todo";
+    const values = key === "mission" ? onboardingDraft.missions : onboardingDraft.todos;
+    elements.onboardingContent.innerHTML = `${renderGuideCopy(key)}<div class="onboarding-inputs"></div><button class="add-trigger onboarding-add" type="button">＋追加</button><div class="onboarding-actions"><button class="secondary-button" type="button" data-onboarding-skip>あとで</button><button class="onboarding-primary" type="button" data-onboarding-next>${key === "mission" ? "次へ" : "Growth Appをはじめる"}</button></div>`;
+    const inputs = elements.onboardingContent.querySelector(".onboarding-inputs");
+    (values.length ? values : [""]).forEach((value) => appendOnboardingInput(inputs, key, value));
+    updateOnboardingAddButton(key);
+    elements.onboardingContent.querySelector(".onboarding-add").addEventListener("click", () => {
+      appendOnboardingInput(inputs, key, "");
+      updateOnboardingAddButton(key);
+      inputs.lastElementChild.focus();
+    });
+  }
+  bindOnboardingControls();
+}
+
+function escapeAttribute(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+}
+
+function appendOnboardingInput(container, key, value) {
+  const input = document.createElement("input");
+  input.type = "text";
+  input.maxLength = key === "mission" ? 80 : 100;
+  input.placeholder = key === "mission" ? "Missionを入力" : "Todoを入力";
+  input.value = value;
+  container.appendChild(input);
+}
+
+function updateOnboardingAddButton(key) {
+  const max = key === "mission" ? XP_RULES.missionMaxCount : 3;
+  const button = elements.onboardingContent.querySelector(".onboarding-add");
+  button.hidden = elements.onboardingContent.querySelectorAll(".onboarding-inputs input").length >= max;
+}
+
+function bindOnboardingControls() {
+  const next = elements.onboardingContent.querySelector("[data-onboarding-next]");
+  const skip = elements.onboardingContent.querySelector("[data-onboarding-skip]");
+  const habitInput = elements.onboardingContent.querySelector(".onboarding-single-input");
+  if (habitInput) {
+    habitInput.addEventListener("input", () => { next.disabled = !habitInput.value.trim(); });
+    next.disabled = !habitInput.value.trim();
+    habitInput.focus();
+  }
+  next.addEventListener("click", () => advanceOnboarding(false));
+  if (skip) skip.addEventListener("click", () => advanceOnboarding(true));
+}
+
+function advanceOnboarding(skip = false) {
+  if (onboardingStep === 1) {
+    const value = elements.onboardingContent.querySelector("input").value.trim();
+    if (!value) return;
+    onboardingDraft.habit = value;
+  } else if (onboardingStep === 2 || onboardingStep === 3) {
+    const key = onboardingStep === 2 ? "missions" : "todos";
+    onboardingDraft[key] = skip ? [] : [...elements.onboardingContent.querySelectorAll(".onboarding-inputs input")].map((input) => input.value.trim()).filter(Boolean);
+  }
+  if (onboardingStep < 3) {
+    onboardingStep += 1;
+    renderOnboardingStep();
+    return;
+  }
+  finishOnboarding();
+}
+
+function finishOnboarding() {
+  state.habit.name = onboardingDraft.habit;
+  state.habit.startedDate = getLocalDateString();
+  state.habit.streak = 0;
+  state.habit.lastCompletedDate = null;
+  state.missions = onboardingDraft.missions.map(createMissionEntry);
+  state.tasks.push(...onboardingDraft.todos.map(createTaskEntry));
+  state.tutorialCompleted = true;
+  state.missionPromptHandledDate = getLocalDateString();
+  habitCardExpanded = true;
+  missionCardExpanded = true;
+  todoCardExpanded = onboardingDraft.todos.length > 0;
+  saveState();
+  renderAll();
+  elements.onboardingDialog.close();
+}
+
+function openHelpDialog() {
+  elements.helpContent.innerHTML = ["habit", "mission", "todo"].map((key) => `<article>${renderGuideCopy(key)}</article>`).join("");
+  elements.helpDialog.showModal();
 }
 
 function addDailyMissionInput() {
@@ -679,7 +823,11 @@ function getTodayTasks() {
 
 function isTodoComplete() {
   const todayTasks = getTodayTasks();
-  return todayTasks.every((task) => task.completed);
+  return todayTasks.length > 0 && todayTasks.every((task) => task.completed);
+}
+
+function canCollapseTodo() {
+  return getTodayTasks().length === 0 || isTodoComplete();
 }
 
 function toggleCard(type) {
@@ -690,7 +838,7 @@ function toggleCard(type) {
     if (!isMissionComplete()) return;
     missionCardExpanded = !missionCardExpanded;
   } else {
-    if (!isTodoComplete()) return;
+    if (!canCollapseTodo()) return;
     todoCardExpanded = !todoCardExpanded;
     if (!todoCardExpanded) elements.futureTodoDetails.open = false;
   }
@@ -708,8 +856,9 @@ function renderCollapsibleCards() {
   elements.missionCard.classList.toggle("collapsed", !missionCardExpanded);
   elements.todoCardBody.hidden = !todoCardExpanded;
   elements.todoCollapseButton.setAttribute("aria-expanded", String(todoCardExpanded));
-  elements.todoCollapseButton.disabled = !isTodoComplete();
+  elements.todoCollapseButton.disabled = !canCollapseTodo();
   elements.todoCard.classList.toggle("collapsed", !todoCardExpanded);
+  elements.todoCard.classList.toggle("empty-todo", getTodayTasks().length === 0);
 }
 
 function addPoints(points) {
@@ -1059,7 +1208,16 @@ function addTask(event) {
     return;
   }
 
-  state.tasks.push({
+  state.tasks.push(createTaskEntry(text));
+  todoCardExpanded = true;
+  elements.taskError.textContent = "";
+  closeQuickAdd("task");
+  saveState();
+  renderAll();
+}
+
+function createTaskEntry(text) {
+  return {
     id: createId(),
     text,
     completed: false,
@@ -1067,12 +1225,7 @@ function addTask(event) {
     xpAwarded: 0,
     completedDate: null,
     visibleFrom: null
-  });
-  todoCardExpanded = true;
-  elements.taskError.textContent = "";
-  closeQuickAdd("task");
-  saveState();
-  renderAll();
+  };
 }
 
 function toggleTask(id) {
@@ -1196,8 +1349,9 @@ function renderHabit() {
     "completed",
     hasHabit && state.habit.completedToday
   );
-  const streakText = hasHabit && state.habit.startedDate === getLocalDateString()
-    ? "今日からスタート 🌱"
+  const isStartDate = hasHabit && state.habit.startedDate === getLocalDateString();
+  const streakText = isStartDate
+    ? state.habit.completedToday ? "1日目 達成 🌱" : "今日からスタート 🌱"
     : state.habit.streak > 0
       ? `継続 ${state.habit.streak}日目 🔥`
       : "今日からスタート 🌱";
@@ -1246,9 +1400,9 @@ function renderTasks() {
   });
 
   const incompleteCount = todayTasks.filter((task) => !task.completed).length;
-  elements.taskCount.textContent = isTodoComplete()
-    ? "すべて完了"
-    : `未完了${incompleteCount}件`;
+  elements.taskCount.textContent = todayTasks.length === 0
+    ? "0件"
+    : isTodoComplete() ? "すべて完了" : `未完了${incompleteCount}件`;
 }
 
 function renderFutureTasks() {
