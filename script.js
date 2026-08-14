@@ -378,6 +378,7 @@ const elements = {
 };
 
 applyFeatureVisibility();
+updateVisualViewportHeight();
 setUpEventListeners();
 renderAll();
 renderAppRoute();
@@ -429,6 +430,8 @@ function handleDateChange() {
 }
 
 function setUpEventListeners() {
+  window.visualViewport?.addEventListener("resize", updateVisualViewportHeight);
+  window.addEventListener("orientationchange", updateVisualViewportHeight);
   elements.gardenEntryButton.addEventListener("click", openGrowthGarden);
   elements.themeOptions.forEach((option) => {
     option.addEventListener("click", () => selectGardenTheme(option.dataset.theme));
@@ -472,6 +475,11 @@ function setUpEventListeners() {
   elements.scheduleCancelButton.addEventListener("click", () => elements.scheduleDialog.close());
   document.addEventListener("toggle", closeOtherMenus, true);
   document.addEventListener("click", closeMenusFromOutside);
+}
+
+function updateVisualViewportHeight() {
+  const height = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty("--app-visual-viewport-height", `${Math.round(height)}px`);
 }
 
 function applyFeatureVisibility() {
