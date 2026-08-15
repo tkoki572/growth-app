@@ -280,6 +280,7 @@ let todoCardExpanded = !canCollapseTodo();
 let missionQuickAddOpen = false;
 let onboardingStep = 0;
 let onboardingDraft = { habit: "", missions: [], todos: [] };
+let tutorialViewportBaseline = window.visualViewport?.height || window.innerHeight;
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -431,7 +432,13 @@ function handleDateChange() {
 
 function setUpEventListeners() {
   window.visualViewport?.addEventListener("resize", updateVisualViewportHeight);
-  window.addEventListener("orientationchange", updateVisualViewportHeight);
+  window.visualViewport?.addEventListener("scroll", updateVisualViewportHeight);
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(() => {
+      tutorialViewportBaseline = window.visualViewport?.height || window.innerHeight;
+      updateVisualViewportHeight();
+    }, 250);
+  });
   elements.gardenEntryButton.addEventListener("click", openGrowthGarden);
   elements.themeOptions.forEach((option) => {
     option.addEventListener("click", () => selectGardenTheme(option.dataset.theme));
@@ -462,6 +469,10 @@ function setUpEventListeners() {
   elements.helpButton.addEventListener("click", openHelpDialog);
   elements.helpCloseButton.addEventListener("click", () => elements.helpDialog.close());
   elements.onboardingDialog.addEventListener("cancel", (event) => event.preventDefault());
+  elements.onboardingDialog.addEventListener("focusin", handleOnboardingFocus);
+  elements.onboardingDialog.addEventListener("focusout", () => {
+    window.setTimeout(updateVisualViewportHeight, 80);
+  });
   elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
   elements.missionForm.addEventListener("submit", addMission);
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
@@ -478,8 +489,45 @@ function setUpEventListeners() {
 }
 
 function updateVisualViewportHeight() {
-  const height = window.visualViewport?.height || window.innerHeight;
-  document.documentElement.style.setProperty("--app-visual-viewport-height", `${Math.round(height)}px`);
+  const viewport = window.visualViewport;
+  const height = viewport?.height || window.innerHeight;
+  const width = viewport?.width || window.innerWidth;
+  const focusedInput = elements.onboardingDialog?.open &&
+    elements.onboardingDialog.contains(document.activeElement) &&
+    document.activeElement.matches("input");
+  const keyboardOpen = Boolean(viewport && focusedInput && height < tutorialViewportBaseline - 80);
+  if (!focusedInput && height > tutorialViewportBaseline - 40) {
+    tutorialViewportBaseline = height;
+  }
+  const root = document.documentElement;
+  root.style.setProperty("--app-visual-viewport-height", `${Math.round(height)}px`);
+  root.style.setProperty("--app-visual-viewport-width", `${Math.round(width)}px`);
+  root.style.setProperty("--app-visual-viewport-top", `${Math.round(viewport?.offsetTop || 0)}px`);
+  root.style.setProperty("--app-visual-viewport-left", `${Math.round(viewport?.offsetLeft || 0)}px`);
+  root.classList.toggle("tutorial-keyboard-open", keyboardOpen);
+  if (keyboardOpen) window.requestAnimationFrame(keepFocusedOnboardingInputVisible);
+}
+
+function handleOnboardingFocus(event) {
+  if (!event.target.matches("input")) return;
+  updateVisualViewportHeight();
+  window.setTimeout(updateVisualViewportHeight, 120);
+  window.setTimeout(updateVisualViewportHeight, 360);
+}
+
+function keepFocusedOnboardingInputVisible() {
+  const input = document.activeElement;
+  const panel = elements.onboardingDialog.querySelector(".onboarding-panel");
+  if (!input?.matches("input") || !panel) return;
+  const inputRect = input.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const safeTop = panelRect.top + 18;
+  const safeBottom = panelRect.bottom - 24;
+  if (inputRect.bottom > safeBottom) {
+    panel.scrollTop += inputRect.bottom - safeBottom;
+  } else if (inputRect.top < safeTop) {
+    panel.scrollTop -= safeTop - inputRect.top;
+  }
 }
 
 function applyFeatureVisibility() {
@@ -503,6 +551,7 @@ function startOnboarding() {
   onboardingDraft = { habit: "", missions: [], todos: [] };
   renderOnboardingStep();
   elements.onboardingDialog.showModal();
+  updateVisualViewportHeight();
 }
 
 function renderGuideCopy(key) {
@@ -597,6 +646,7 @@ function finishOnboarding() {
   saveState();
   renderAll();
   elements.onboardingDialog.close();
+  document.documentElement.classList.remove("tutorial-keyboard-open");
 }
 
 function openHelpDialog() {

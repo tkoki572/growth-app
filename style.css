@@ -504,6 +504,25 @@ input[type="checkbox"] {
   box-shadow: 0 22px 60px rgba(20, 30, 23, .2);
 }
 .onboarding-dialog::backdrop { background: rgba(31, 38, 33, .38); }
+.tutorial-keyboard-open body { overflow: hidden; }
+.tutorial-keyboard-open #onboardingDialog[open] {
+  position: fixed;
+  top: calc(var(--app-visual-viewport-top, 0px) + 8px);
+  right: auto;
+  bottom: auto;
+  left: calc(var(--app-visual-viewport-left, 0px) + 8px);
+  width: calc(var(--app-visual-viewport-width, 100vw) - 16px);
+  height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+}
+.tutorial-keyboard-open #onboardingDialog .onboarding-panel {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
 .onboarding-panel {
   max-height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
   padding: 24px;
