@@ -94,7 +94,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 13,
+    version: 14,
     lastUsedDate: getLocalDateString(),
     missionPromptHandledDate: null,
     tutorialCompleted: false,
@@ -106,6 +106,7 @@ function createInitialState() {
       streak: 0,
       lastCompletedDate: null,
       startedDate: null,
+      restartDate: null,
       pointAwardDates: [],
       totalCompletedDays: 0
     },
@@ -156,7 +157,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 13,
+    version: 14,
     tutorialCompleted: typeof savedState?.tutorialCompleted === "boolean"
       ? savedState.tutorialCompleted
       : true,
@@ -171,6 +172,9 @@ function mergeState(savedState) {
       startedDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.startedDate || "")
         ? savedHabit.startedDate
         : inferredStartedDate,
+      restartDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.restartDate || "")
+        ? savedHabit.restartDate
+        : null,
       pointAwardDates: savedHabitDates,
       totalCompletedDays: Math.max(
         Number(savedHabit.totalCompletedDays) || 0,
@@ -371,6 +375,9 @@ const elements = {
   helpDialog: document.getElementById("helpDialog"),
   helpContent: document.getElementById("helpContent"),
   helpCloseButton: document.getElementById("helpCloseButton"),
+  habitGapDialog: document.getElementById("habitGapDialog"),
+  habitContinuedButton: document.getElementById("habitContinuedButton"),
+  habitRestartButton: document.getElementById("habitRestartButton"),
   scheduleDialog: document.getElementById("scheduleDialog"),
   scheduleDialogTitle: document.getElementById("scheduleDialogTitle"),
   scheduleDateForm: document.getElementById("scheduleDateForm"),
@@ -383,8 +390,8 @@ updateVisualViewportHeight();
 setUpEventListeners();
 renderAll();
 renderAppRoute();
-if (state.tutorialCompleted) showDailyMissionPromptIfNeeded();
-else startOnboarding();
+if (!state.tutorialCompleted) startOnboarding();
+else if (!showHabitGapPromptIfNeeded()) showDailyMissionPromptIfNeeded();
 window.setInterval(() => {
   const beforeDate = state.lastUsedDate;
   handleDateChange();
@@ -468,6 +475,9 @@ function setUpEventListeners() {
   elements.dailyMissionInputs.addEventListener("input", updateDailyMissionPrompt);
   elements.helpButton.addEventListener("click", openHelpDialog);
   elements.helpCloseButton.addEventListener("click", () => elements.helpDialog.close());
+  elements.habitGapDialog.addEventListener("cancel", (event) => event.preventDefault());
+  elements.habitContinuedButton.addEventListener("click", continueHabitThroughMissingDays);
+  elements.habitRestartButton.addEventListener("click", restartHabitFromToday);
   elements.onboardingDialog.addEventListener("cancel", (event) => event.preventDefault());
   elements.onboardingDialog.addEventListener("focusin", handleOnboardingFocus);
   elements.onboardingDialog.addEventListener("focusout", () => {
@@ -544,6 +554,53 @@ function showDailyMissionPromptIfNeeded() {
   addDailyMissionInput();
   elements.dailyMissionDialog.showModal();
   elements.dailyMissionInputs.querySelector("input").focus();
+}
+
+function getDateDistance(fromDate, toDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(toDate || "")) return 0;
+  const [fromYear, fromMonth, fromDay] = fromDate.split("-").map(Number);
+  const [toYear, toMonth, toDay] = toDate.split("-").map(Number);
+  return Math.round(
+    (Date.UTC(toYear, toMonth - 1, toDay) - Date.UTC(fromYear, fromMonth - 1, fromDay)) / 86400000
+  );
+}
+
+function getMissingHabitDayCount() {
+  if (!state.habit.name || state.habit.completedToday || !state.habit.lastCompletedDate) return 0;
+  return Math.max(0, getDateDistance(state.habit.lastCompletedDate, getLocalDateString()) - 1);
+}
+
+function showHabitGapPromptIfNeeded() {
+  if (getMissingHabitDayCount() === 0) return false;
+  elements.habitGapDialog.showModal();
+  return true;
+}
+
+function continueHabitThroughMissingDays() {
+  const missingDays = getMissingHabitDayCount();
+  if (missingDays > 0) {
+    state.habit.streak = Math.max(1, state.habit.streak) + missingDays;
+    state.habit.totalCompletedDays += missingDays;
+    state.habit.lastCompletedDate = getPreviousDateString(getLocalDateString());
+    saveState();
+    renderAll();
+  }
+  elements.habitGapDialog.close();
+  showDailyMissionPromptIfNeeded();
+}
+
+function restartHabitFromToday() {
+  const today = getLocalDateString();
+  state.habit.completedToday = false;
+  state.habit.streak = 0;
+  state.habit.lastCompletedDate = null;
+  state.habit.startedDate = today;
+  state.habit.restartDate = today;
+  habitCardExpanded = true;
+  saveState();
+  renderAll();
+  elements.habitGapDialog.close();
+  showDailyMissionPromptIfNeeded();
 }
 
 function startOnboarding() {
@@ -634,6 +691,7 @@ function advanceOnboarding(skip = false) {
 function finishOnboarding() {
   state.habit.name = onboardingDraft.habit;
   state.habit.startedDate = getLocalDateString();
+  state.habit.restartDate = null;
   state.habit.streak = 0;
   state.habit.lastCompletedDate = null;
   state.missions = onboardingDraft.missions.map(createMissionEntry);
@@ -1033,6 +1091,7 @@ function saveEditedItem(event) {
       state.habit.streak = 0;
       state.habit.lastCompletedDate = null;
       state.habit.startedDate = getLocalDateString();
+      state.habit.restartDate = null;
       habitCardExpanded = true;
       checkAndAwardAchievementBonus();
     }
@@ -1407,15 +1466,27 @@ function renderHabit() {
     "completed",
     hasHabit && state.habit.completedToday
   );
-  const isStartDate = hasHabit && state.habit.startedDate === getLocalDateString();
+  const today = getLocalDateString();
+  const isStartDate = hasHabit && state.habit.startedDate === today;
+  const isRestartDate = hasHabit && state.habit.restartDate === today;
+  const expectedStreakDay = !state.habit.completedToday &&
+    state.habit.lastCompletedDate === getPreviousDateString(today)
+      ? state.habit.streak + 1
+      : state.habit.streak;
   const streakText = isStartDate
-    ? state.habit.completedToday ? "1日目 達成 🌱" : "今日からスタート 🌱"
-    : state.habit.streak > 0
-      ? `継続 ${state.habit.streak}日目 🔥`
+    ? state.habit.completedToday
+      ? isRestartDate ? "1日目 完了" : "1日目 達成 🌱"
+      : "今日からスタート 🌱"
+    : expectedStreakDay > 0
+      ? state.habit.completedToday
+        ? `継続 ${expectedStreakDay}日目 完了`
+        : `継続 ${expectedStreakDay}日目 🔥`
       : "今日からスタート 🌱";
   elements.habitStreak.textContent = streakText;
   elements.habitCollapsedStreak.textContent = hasHabit && state.habit.completedToday
-    ? `継続 ${Math.max(1, state.habit.streak)}日目 完了`
+    ? state.habit.streak <= 1
+      ? "1日目 完了"
+      : `継続 ${state.habit.streak}日目 完了`
     : "";
   elements.habitForm.hidden = hasHabit;
   elements.habitThemeSelect.value = state.habit.theme;
@@ -1530,14 +1601,6 @@ function createListItem(item, onToggle, onDelete) {
     openEditDialog(type, item.id);
   });
 
-  if (onToggle === toggleTask) {
-    const scheduleButton = document.createElement("button");
-    scheduleButton.type = "button";
-    scheduleButton.textContent = "あとで表示";
-    scheduleButton.addEventListener("click", () => openScheduleDialog(item.id));
-    panel.appendChild(scheduleButton);
-  }
-
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "danger-action";
@@ -1547,7 +1610,19 @@ function createListItem(item, onToggle, onDelete) {
   panel.prepend(editButton);
   panel.appendChild(deleteButton);
   menu.append(summary, panel);
-  listItem.append(checkbox, text, menu);
+  const actions = document.createElement("span");
+  actions.className = "item-actions";
+  if (onToggle === toggleTask) {
+    const scheduleButton = document.createElement("button");
+    scheduleButton.type = "button";
+    scheduleButton.className = "icon-button calendar-button";
+    scheduleButton.setAttribute("aria-label", `${item.text}をあとで表示`);
+    scheduleButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg>';
+    scheduleButton.addEventListener("click", () => openScheduleDialog(item.id));
+    actions.appendChild(scheduleButton);
+  }
+  actions.appendChild(menu);
+  listItem.append(checkbox, text, actions);
   return listItem;
 }
 
