@@ -4,8 +4,9 @@ const OLD_TODO_STORAGE_KEY = "todos";
 const GROWTH_GARDEN_ENABLED = false;
 const XP_RULES = Object.freeze({
   habit: 5,
-  missionByOrder: Object.freeze([2, 2, 4]),
+  mission: 2,
   missionMaxCount: 3,
+  missionThreeBonus: 2,
   todo: 1,
   todoMaxCount: 5,
   completionBonus: 2,
@@ -94,7 +95,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 14,
+    version: 15,
     lastUsedDate: getLocalDateString(),
     missionPromptHandledDate: null,
     tutorialCompleted: false,
@@ -115,6 +116,7 @@ function createInitialState() {
     daily: {
       date: getLocalDateString(),
       missionXpCount: 0,
+      missionThreeBonusAwarded: false,
       todoXpCount: 0,
       achievementBonusAwarded: false,
       completionBonusXp: 0
@@ -139,6 +141,20 @@ function mergeState(savedState) {
   const initialState = createInitialState();
   const savedHabit = savedState && savedState.habit ? savedState.habit : {};
   const savedDaily = savedState && savedState.daily ? savedState.daily : {};
+  const savedMissions = Array.isArray(savedState?.missions) ? savedState.missions : [];
+  const isLegacyMissionXp = Number(savedState?.version) <= 14;
+  const legacyMissionThreeBonus = isLegacyMissionXp &&
+    savedMissions.length === XP_RULES.missionMaxCount &&
+    savedMissions.every((mission) => mission.completed) &&
+    savedMissions.some((mission) => (Number(mission.xpAwarded) || 0) > XP_RULES.mission);
+  const oldMissionXp = savedMissions.reduce((sum, mission) => sum + (Number(mission.xpAwarded) || 0), 0);
+  const normalizedMissionXp = savedMissions.reduce(
+    (sum, mission) => sum + Math.min(Number(mission.xpAwarded) || 0, XP_RULES.mission),
+    0
+  );
+  const missionMigrationAdjustment = isLegacyMissionXp
+    ? normalizedMissionXp + (legacyMissionThreeBonus ? XP_RULES.missionThreeBonus : 0) - oldMissionXp
+    : 0;
   const savedGarden = savedState?.growthGarden && typeof savedState.growthGarden === "object"
     ? savedState.growthGarden
     : {};
@@ -157,7 +173,8 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 14,
+    version: 15,
+    totalPoints: Math.max(0, (Number(savedState?.totalPoints) || 0) + missionMigrationAdjustment),
     tutorialCompleted: typeof savedState?.tutorialCompleted === "boolean"
       ? savedState.tutorialCompleted
       : true,
@@ -186,6 +203,9 @@ function mergeState(savedState) {
       ...initialState.daily,
       ...savedDaily,
       missionXpCount: Number(savedDaily.missionXpCount) || 0,
+      missionThreeBonusAwarded: Boolean(
+        savedDaily.missionThreeBonusAwarded || legacyMissionThreeBonus
+      ),
       todoXpCount: Math.min(
         Number(savedDaily.todoXpCount ?? savedDaily.taskPointCount) || 0,
         XP_RULES.todoMaxCount
@@ -195,14 +215,16 @@ function mergeState(savedState) {
           ? (Number(savedState?.version) <= 2 ? 10 : XP_RULES.completionBonus)
           : 0)
     },
-    missions: Array.isArray(savedState?.missions)
-      ? savedState.missions.map((mission) => ({
+    missions: savedMissions.length > 0
+      ? savedMissions.map((mission) => ({
           ...mission,
           pointAwarded:
             typeof mission.pointAwarded === "boolean"
               ? mission.pointAwarded
               : Boolean(mission.completed),
-          xpAwarded: Number(mission.xpAwarded) || 0
+          xpAwarded: isLegacyMissionXp
+            ? Math.min(Number(mission.xpAwarded) || 0, XP_RULES.mission)
+            : Number(mission.xpAwarded) || 0
         }))
       : [],
     tasks: Array.isArray(savedState?.tasks)
@@ -430,6 +452,7 @@ function handleDateChange() {
   state.daily = {
     date: today,
     missionXpCount: 0,
+    missionThreeBonusAwarded: false,
     todoXpCount: 0,
     achievementBonusAwarded: false,
     completionBonusXp: 0
@@ -1278,8 +1301,7 @@ function toggleMission(id) {
     vibrateOnCompletion();
     if (!mission.pointAwarded) {
       if (state.daily.missionXpCount < XP_RULES.missionMaxCount) {
-        const missionIndex = state.missions.findIndex((item) => item.id === id);
-        const missionXp = XP_RULES.missionByOrder[missionIndex] || 0;
+        const missionXp = XP_RULES.mission;
         addPoints(missionXp);
         state.daily.missionXpCount += 1;
         mission.xpAwarded = missionXp;
@@ -1294,6 +1316,7 @@ function toggleMission(id) {
     mission.pointAwarded = false;
     mission.xpAwarded = 0;
   }
+  checkAndAwardMissionThreeBonus();
   checkAndAwardAchievementBonus();
   if (mission.completed) {
     queueXpAnimation("mission", id, state.totalPoints - previousPoints);
@@ -1311,6 +1334,7 @@ function deleteMission(id) {
   }
   state.missions = state.missions.filter((mission) => mission.id !== id);
   missionCardExpanded = true;
+  checkAndAwardMissionThreeBonus();
   checkAndAwardAchievementBonus();
   saveState();
   renderAll();
@@ -1410,6 +1434,19 @@ function checkAndAwardAchievementBonus() {
     removePoints(state.daily.completionBonusXp);
     state.daily.achievementBonusAwarded = false;
     state.daily.completionBonusXp = 0;
+  }
+}
+
+function checkAndAwardMissionThreeBonus() {
+  const isComplete = state.missions.length === XP_RULES.missionMaxCount &&
+    state.missions.every((mission) => mission.completed);
+
+  if (isComplete && !state.daily.missionThreeBonusAwarded) {
+    addPoints(XP_RULES.missionThreeBonus);
+    state.daily.missionThreeBonusAwarded = true;
+  } else if (!isComplete && state.daily.missionThreeBonusAwarded) {
+    removePoints(XP_RULES.missionThreeBonus);
+    state.daily.missionThreeBonusAwarded = false;
   }
 }
 

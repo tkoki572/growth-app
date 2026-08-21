@@ -912,8 +912,21 @@ input[type="checkbox"] {
   text-align: left;
 }
 .schedule-options button:hover { background: #e8ebe6; }
-.schedule-dialog form { padding: 0; margin-top: 18px; }
+.schedule-dialog,
+.schedule-dialog .dialog-content,
+.schedule-dialog form { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.schedule-dialog form { width: 100%; padding: 0; margin-top: 18px; }
 .schedule-dialog label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 700; }
+.schedule-dialog input[type="date"] {
+  display: block;
+  width: 100%;
+  inline-size: 100%;
+  min-width: 0;
+  min-inline-size: 0;
+  max-width: 100%;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .xp-reward, .level-up-notice.show, .card.level-up, .garden-view, .garden-scene img, .garden-light, .garden-leaf, .garden-butterfly { animation: none; }
