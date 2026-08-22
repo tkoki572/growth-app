@@ -926,6 +926,9 @@ input[type="checkbox"] {
   max-width: 100%;
   max-inline-size: 100%;
   box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
