@@ -95,7 +95,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 15,
+    version: 16,
     lastUsedDate: getLocalDateString(),
     missionPromptHandledDate: null,
     tutorialCompleted: false,
@@ -108,6 +108,8 @@ function createInitialState() {
       lastCompletedDate: null,
       startedDate: null,
       restartDate: null,
+      completionBaseStreak: null,
+      completionBaseDate: null,
       pointAwardDates: [],
       totalCompletedDays: 0
     },
@@ -173,7 +175,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 15,
+    version: 16,
     totalPoints: Math.max(0, (Number(savedState?.totalPoints) || 0) + missionMigrationAdjustment),
     tutorialCompleted: typeof savedState?.tutorialCompleted === "boolean"
       ? savedState.tutorialCompleted
@@ -191,6 +193,14 @@ function mergeState(savedState) {
         : inferredStartedDate,
       restartDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.restartDate || "")
         ? savedHabit.restartDate
+        : null,
+      completionBaseStreak: savedHabit.completionBaseStreak !== null &&
+        savedHabit.completionBaseStreak !== undefined &&
+        Number.isFinite(Number(savedHabit.completionBaseStreak))
+        ? Math.max(0, Number(savedHabit.completionBaseStreak))
+        : null,
+      completionBaseDate: /^\d{4}-\d{2}-\d{2}$/.test(savedHabit.completionBaseDate || "")
+        ? savedHabit.completionBaseDate
         : null,
       pointAwardDates: savedHabitDates,
       totalCompletedDays: Math.max(
@@ -299,6 +309,7 @@ function createId() {
 }
 
 let state = loadState();
+repairUncheckedHabitCompletion();
 handleDateChange();
 let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
@@ -415,16 +426,23 @@ renderAppRoute();
 if (!state.tutorialCompleted) startOnboarding();
 else if (!showHabitGapPromptIfNeeded()) showDailyMissionPromptIfNeeded();
 window.setInterval(() => {
-  const beforeDate = state.lastUsedDate;
-  handleDateChange();
-  if (state.lastUsedDate !== beforeDate) {
+  refreshForCurrentDate();
+}, 60000);
+
+function refreshForCurrentDate() {
+  const dateChanged = handleDateChange();
+  if (dateChanged) {
     habitCardExpanded = true;
     missionCardExpanded = true;
     todoCardExpanded = !canCollapseTodo();
     renderAll();
+  } else {
+    renderCurrentDate();
   }
-  else renderCurrentDate();
-}, 60000);
+
+  if (!state.tutorialCompleted || elements.onboardingDialog.open) return;
+  if (!showHabitGapPromptIfNeeded()) showDailyMissionPromptIfNeeded();
+}
 
 function handleDateChange() {
   const today = getLocalDateString();
@@ -442,11 +460,13 @@ function handleDateChange() {
 
   if (state.lastUsedDate === today && state.daily.date === today) {
     if (dueTasks.length > 0) saveState();
-    return;
+    return false;
   }
 
   state.lastUsedDate = today;
   state.habit.completedToday = false;
+  state.habit.completionBaseStreak = null;
+  state.habit.completionBaseDate = null;
   state.missions = [];
   state.tasks = state.tasks.filter((task) => !task.completed);
   state.daily = {
@@ -458,9 +478,32 @@ function handleDateChange() {
     completionBonusXp: 0
   };
   saveState();
+  return true;
+}
+
+function repairUncheckedHabitCompletion() {
+  const today = getLocalDateString();
+  if (state.habit.completedToday || state.habit.lastCompletedDate !== today || state.habit.pointAwardDates.includes(today)) return;
+  const hasCompletionBase = state.habit.completionBaseStreak !== null;
+  const baseStreak = Number(state.habit.completionBaseStreak);
+  if (hasCompletionBase && Number.isFinite(baseStreak)) {
+    state.habit.streak = Math.max(0, baseStreak);
+    state.habit.lastCompletedDate = state.habit.completionBaseDate || null;
+  } else {
+    state.habit.streak = Math.max(0, state.habit.streak - 1);
+    state.habit.lastCompletedDate = state.habit.streak > 0 ? getPreviousDateString(today) : null;
+  }
+  state.habit.completionBaseStreak = null;
+  state.habit.completionBaseDate = null;
+  saveState();
 }
 
 function setUpEventListeners() {
+  window.addEventListener("pageshow", refreshForCurrentDate);
+  window.addEventListener("focus", refreshForCurrentDate);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshForCurrentDate();
+  });
   window.visualViewport?.addEventListener("resize", updateVisualViewportHeight);
   window.visualViewport?.addEventListener("scroll", updateVisualViewportHeight);
   window.addEventListener("orientationchange", () => {
@@ -595,7 +638,7 @@ function getMissingHabitDayCount() {
 
 function showHabitGapPromptIfNeeded() {
   if (getMissingHabitDayCount() === 0) return false;
-  elements.habitGapDialog.showModal();
+  if (!elements.habitGapDialog.open) elements.habitGapDialog.showModal();
   return true;
 }
 
@@ -605,6 +648,8 @@ function continueHabitThroughMissingDays() {
     state.habit.streak = Math.max(1, state.habit.streak) + missingDays;
     state.habit.totalCompletedDays += missingDays;
     state.habit.lastCompletedDate = getPreviousDateString(getLocalDateString());
+    state.habit.completionBaseStreak = null;
+    state.habit.completionBaseDate = null;
     saveState();
     renderAll();
   }
@@ -619,6 +664,8 @@ function restartHabitFromToday() {
   state.habit.lastCompletedDate = null;
   state.habit.startedDate = today;
   state.habit.restartDate = today;
+  state.habit.completionBaseStreak = null;
+  state.habit.completionBaseDate = null;
   habitCardExpanded = true;
   saveState();
   renderAll();
@@ -1026,8 +1073,11 @@ function saveHabitName(event) {
     ? elements.habitThemeSelect.value
     : "balance";
   state.habit.startedDate = getLocalDateString();
+  state.habit.restartDate = null;
   state.habit.streak = 0;
   state.habit.lastCompletedDate = null;
+  state.habit.completionBaseStreak = null;
+  state.habit.completionBaseDate = null;
   elements.habitInput.value = "";
   saveState();
   renderAll();
@@ -1115,6 +1165,8 @@ function saveEditedItem(event) {
       state.habit.lastCompletedDate = null;
       state.habit.startedDate = getLocalDateString();
       state.habit.restartDate = null;
+      state.habit.completionBaseStreak = null;
+      state.habit.completionBaseDate = null;
       habitCardExpanded = true;
       checkAndAwardAchievementBonus();
     }
@@ -1221,6 +1273,8 @@ function toggleHabit() {
 
   if (state.habit.completedToday) {
     vibrateOnCompletion();
+    state.habit.completionBaseStreak = state.habit.streak;
+    state.habit.completionBaseDate = state.habit.lastCompletedDate;
     updateHabitStreak(today);
 
     if (!state.habit.pointAwardDates.includes(today)) {
@@ -1235,6 +1289,17 @@ function toggleHabit() {
       state.habit.totalCompletedDays = Math.max(0, state.habit.totalCompletedDays - 1);
       removePoints(XP_RULES.habit);
     }
+    const hasCompletionBase = state.habit.completionBaseStreak !== null;
+    const baseStreak = Number(state.habit.completionBaseStreak);
+    if (hasCompletionBase && Number.isFinite(baseStreak)) {
+      state.habit.streak = Math.max(0, baseStreak);
+      state.habit.lastCompletedDate = state.habit.completionBaseDate || null;
+    } else if (state.habit.lastCompletedDate === today) {
+      state.habit.streak = Math.max(0, state.habit.streak - 1);
+      state.habit.lastCompletedDate = state.habit.streak > 0 ? getPreviousDateString(today) : null;
+    }
+    state.habit.completionBaseStreak = null;
+    state.habit.completionBaseDate = null;
   }
 
   checkAndAwardAchievementBonus();
@@ -1504,25 +1569,23 @@ function renderHabit() {
     hasHabit && state.habit.completedToday
   );
   const today = getLocalDateString();
-  const isStartDate = hasHabit && state.habit.startedDate === today;
-  const isRestartDate = hasHabit && state.habit.restartDate === today;
-  const expectedStreakDay = !state.habit.completedToday &&
-    state.habit.lastCompletedDate === getPreviousDateString(today)
-      ? state.habit.streak + 1
-      : state.habit.streak;
-  const streakText = isStartDate
-    ? state.habit.completedToday
-      ? isRestartDate ? "1日目 完了" : "1日目 達成 🌱"
-      : "今日からスタート 🌱"
-    : expectedStreakDay > 0
-      ? state.habit.completedToday
-        ? `継続 ${expectedStreakDay}日目 完了`
-        : `継続 ${expectedStreakDay}日目 🔥`
-      : "今日からスタート 🌱";
+  const missingDays = getMissingHabitDayCount();
+  const expectedStreakDay = state.habit.lastCompletedDate === getPreviousDateString(today)
+    ? state.habit.streak + 1
+    : 0;
+  const streakText = state.habit.completedToday
+    ? state.habit.streak <= 1
+      ? "初日達成 🌱"
+      : `継続 ${state.habit.streak}日目 完了`
+    : missingDays > 0
+      ? "記録を確認中"
+      : expectedStreakDay >= 2
+        ? `継続 ${expectedStreakDay}日目 🔥`
+        : "今日からスタート 🌱";
   elements.habitStreak.textContent = streakText;
   elements.habitCollapsedStreak.textContent = hasHabit && state.habit.completedToday
     ? state.habit.streak <= 1
-      ? "1日目 完了"
+      ? "初日達成 🌱"
       : `継続 ${state.habit.streak}日目 完了`
     : "";
   elements.habitForm.hidden = hasHabit;
