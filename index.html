@@ -73,8 +73,13 @@
       </div>
       <div id="missionCardBody" class="collapsible-content">
         <p class="card-subtitle">今日、できたら嬉しいこと</p>
-        <form id="missionForm" class="quick-add-form">
+        <form id="missionForm" class="mission-quick-add-form">
           <input id="missionInput" type="text" maxlength="80" placeholder="Mission①を入力してEnter" aria-label="Mission①" enterkeyhint="done" autocomplete="off">
+          <section id="missionHistoryPanel" class="mission-history" aria-label="最近のMission" hidden></section>
+          <div class="mission-add-actions">
+            <button id="missionCancelButton" class="secondary-button" type="button">キャンセル</button>
+            <button type="submit">追加</button>
+          </div>
         </form>
         <p id="missionError" class="error-message" role="alert"></p>
         <ul id="missionList" class="item-list"></ul>
@@ -242,7 +247,9 @@
       <h2>今日、できたら嬉しいことは？</h2>
       <p>今日のMissionを決めてみましょう</p>
       <div id="dailyMissionInputs" class="daily-mission-inputs"></div>
+      <section id="dailyMissionHistoryPanel" class="mission-history" aria-label="最近のMission" hidden></section>
       <button id="dailyMissionAddButton" class="add-trigger" type="button">＋追加</button>
+      <p id="dailyMissionError" class="error-message" role="alert"></p>
       <div class="dialog-actions daily-mission-actions">
         <button id="dailyMissionLaterButton" class="secondary-button" type="button">あとで</button>
         <button id="dailyMissionSaveButton" type="submit" disabled>決定</button>
