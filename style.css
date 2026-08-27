@@ -112,7 +112,7 @@ h2 { margin: 0; font-size: 19px; line-height: 1.35; }
   font-size: inherit;
   text-align: left;
 }
-.card-collapse-button:hover { background: var(--color-soft); }
+.card-collapse-button:hover { background: transparent; }
 .habit-title-context {
   margin-left: 12px;
   color: var(--color-muted);
@@ -275,22 +275,27 @@ input[type="text"]:focus, input[type="date"]:focus, textarea:focus {
 .mission-entry-actions,
 .daily-mission-entry-actions {
   display: grid;
-  grid-template-columns: minmax(96px, .85fr) minmax(0, 1.15fr);
-  gap: 8px;
-  margin-top: 12px;
+  grid-template-columns: minmax(80px, .85fr) minmax(0, 1.15fr);
+  gap: 4px;
+  margin-top: 8px;
 }
 .mission-primary-add,
-.mission-history-open { min-height: 38px; padding: 7px 10px; font-size: 13px; }
-.mission-primary-add { color: white; background: var(--color-primary); font-weight: 800; }
-.mission-primary-add:hover { background: #356858; }
 .mission-history-open {
-  color: #535a54;
-  background: #eeefec;
-  border: 1px solid #dde0da;
-  font-weight: 650;
+  min-height: 34px;
+  padding: 6px 8px;
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  text-align: left;
 }
-.mission-history-open:hover { color: var(--color-text); background: #e7e9e5; }
-.mission-history-open:disabled { color: #9b9f99; background: #f3f3f1; border-color: #e7e7e3; cursor: default; }
+.mission-primary-add { color: var(--color-primary); font-weight: 750; }
+.mission-primary-add:hover { color: #356858; background: var(--color-primary-soft); }
+.mission-history-open {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.mission-history-open:hover { color: var(--color-text); background: var(--color-soft); }
+.mission-history-open:disabled { color: #a4a8a2; background: transparent; cursor: default; }
 
 .check-row,
 .item-row {
@@ -344,6 +349,29 @@ input[type="checkbox"] {
 .check-row.completed input[type="checkbox"],
 .item-row.completed input[type="checkbox"] {
   accent-color: #2f8a67;
+}
+
+/* Missionでは、途中の完了を静かにし、次に行う項目を自然に前へ出す。 */
+#missionCard:not(.complete) .item-row:not(.completed) {
+  background: #f7f8f6;
+  box-shadow: 0 0 0 1px #e1e6e1;
+}
+#missionCard:not(.complete) .item-row:not(.completed) .item-text {
+  color: var(--color-text);
+  font-weight: 650;
+}
+#missionCard:not(.complete) .item-row.completed {
+  background: #f0f1ee;
+  box-shadow: none;
+}
+#missionCard:not(.complete) .item-row.completed .item-text {
+  color: #858b84;
+  font-weight: 500;
+  text-decoration-color: #aeb4ad;
+}
+#missionCard.complete .item-row.completed {
+  background: rgba(255, 255, 255, .34);
+  box-shadow: none;
 }
 
 .todo-card { padding-top: 16px; padding-bottom: 16px; }
