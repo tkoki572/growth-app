@@ -327,10 +327,9 @@ handleDateChange();
 let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
 let todoCardExpanded = !canCollapseTodo();
-let missionQuickAddOpen = false;
 let missionHistoryExpanded = false;
-let dailyMissionHistoryExpanded = false;
 let dailyMissionTargetInput = null;
+let missionHistoryContext = "home";
 let onboardingStep = 0;
 let onboardingDraft = { habit: "", missions: [], todos: [] };
 let tutorialViewportBaseline = window.visualViewport?.height || window.innerHeight;
@@ -383,14 +382,22 @@ const elements = {
   habitCollapsedStreak: document.getElementById("habitCollapsedStreak"),
   habitStreak: document.getElementById("habitStreak"),
   missionForm: document.getElementById("missionForm"),
+  missionAddDialog: document.getElementById("missionAddDialog"),
   missionCard: document.getElementById("missionCard"),
   missionCardBody: document.getElementById("missionCardBody"),
   missionCollapseButton: document.getElementById("missionCollapseButton"),
   missionOpenButton: document.getElementById("missionOpenButton"),
   missionInput: document.getElementById("missionInput"),
   missionError: document.getElementById("missionError"),
-  missionHistoryPanel: document.getElementById("missionHistoryPanel"),
+  missionAddError: document.getElementById("missionAddError"),
+  missionEntryActions: document.getElementById("missionEntryActions"),
   missionCancelButton: document.getElementById("missionCancelButton"),
+  missionHistoryOpenButton: document.getElementById("missionHistoryOpenButton"),
+  missionHistoryDialog: document.getElementById("missionHistoryDialog"),
+  missionHistoryList: document.getElementById("missionHistoryList"),
+  missionHistoryToggleButton: document.getElementById("missionHistoryToggleButton"),
+  missionHistoryError: document.getElementById("missionHistoryError"),
+  missionHistoryCancelButton: document.getElementById("missionHistoryCancelButton"),
   missionList: document.getElementById("missionList"),
   missionCount: document.getElementById("missionCount"),
   todoCard: document.getElementById("todoCard"),
@@ -417,9 +424,9 @@ const elements = {
   dailyMissionDialog: document.getElementById("dailyMissionDialog"),
   dailyMissionForm: document.getElementById("dailyMissionForm"),
   dailyMissionInputs: document.getElementById("dailyMissionInputs"),
-  dailyMissionHistoryPanel: document.getElementById("dailyMissionHistoryPanel"),
   dailyMissionError: document.getElementById("dailyMissionError"),
   dailyMissionAddButton: document.getElementById("dailyMissionAddButton"),
+  dailyMissionHistoryOpenButton: document.getElementById("dailyMissionHistoryOpenButton"),
   dailyMissionLaterButton: document.getElementById("dailyMissionLaterButton"),
   dailyMissionSaveButton: document.getElementById("dailyMissionSaveButton"),
   onboardingDialog: document.getElementById("onboardingDialog"),
@@ -557,6 +564,7 @@ function setUpEventListeners() {
   elements.habitThemeCancelButton.addEventListener("click", () => elements.habitThemeDialog.close());
   elements.dailyMissionForm.addEventListener("submit", saveDailyMissions);
   elements.dailyMissionAddButton.addEventListener("click", addDailyMissionInput);
+  elements.dailyMissionHistoryOpenButton.addEventListener("click", () => openMissionHistoryDialog("daily"));
   elements.dailyMissionLaterButton.addEventListener("click", dismissDailyMissionPrompt);
   elements.dailyMissionInputs.addEventListener("input", updateDailyMissionPrompt);
   elements.dailyMissionInputs.addEventListener("focusin", (event) => {
@@ -572,9 +580,15 @@ function setUpEventListeners() {
   elements.onboardingDialog.addEventListener("focusout", () => {
     window.setTimeout(updateVisualViewportHeight, 80);
   });
-  elements.missionOpenButton.addEventListener("click", () => openQuickAdd("mission"));
+  elements.missionOpenButton.addEventListener("click", openMissionAddDialog);
+  elements.missionHistoryOpenButton.addEventListener("click", () => openMissionHistoryDialog("home"));
   elements.missionForm.addEventListener("submit", addMission);
-  elements.missionCancelButton.addEventListener("click", () => closeQuickAdd("mission"));
+  elements.missionCancelButton.addEventListener("click", closeMissionAddDialog);
+  elements.missionHistoryToggleButton.addEventListener("click", () => {
+    missionHistoryExpanded = !missionHistoryExpanded;
+    renderMissionHistoryDialog();
+  });
+  elements.missionHistoryCancelButton.addEventListener("click", () => elements.missionHistoryDialog.close());
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
   elements.taskForm.addEventListener("submit", addTask);
   elements.editForm.addEventListener("submit", saveEditedItem);
@@ -642,10 +656,8 @@ function showDailyMissionPromptIfNeeded() {
   if (state.missions.length > 0) return;
   elements.dailyMissionInputs.innerHTML = "";
   elements.dailyMissionError.textContent = "";
-  dailyMissionHistoryExpanded = false;
   dailyMissionTargetInput = null;
   addDailyMissionInput();
-  renderDailyMissionHistory();
   elements.dailyMissionDialog.showModal();
   elements.dailyMissionInputs.querySelector("input").focus();
 }
@@ -830,6 +842,7 @@ function updateDailyMissionPrompt() {
   const inputs = [...elements.dailyMissionInputs.querySelectorAll("input")];
   elements.dailyMissionError.textContent = "";
   elements.dailyMissionAddButton.hidden = inputs.length >= XP_RULES.missionMaxCount;
+  elements.dailyMissionHistoryOpenButton.disabled = state.missionHistory.length === 0;
   elements.dailyMissionSaveButton.disabled = !inputs.some((input) => input.value.trim());
 }
 
@@ -883,73 +896,77 @@ function rememberMissionTexts(texts) {
   });
 }
 
-function renderMissionHistory(container, expanded, onSelect, onToggle) {
-  container.innerHTML = "";
-  container.hidden = state.missionHistory.length === 0;
-  if (container.hidden) return;
+function openMissionHistoryDialog(context) {
+  if (state.missionHistory.length === 0) {
+    const message = "まだMission履歴がありません。";
+    if (context === "daily") elements.dailyMissionError.textContent = message;
+    else elements.missionError.textContent = message;
+    return;
+  }
+  missionHistoryContext = context;
+  missionHistoryExpanded = false;
+  elements.missionHistoryError.textContent = "";
+  renderMissionHistoryDialog();
+  elements.missionHistoryDialog.showModal();
+}
 
-  const heading = document.createElement("h3");
-  heading.textContent = "最近のMission";
-  const list = document.createElement("div");
-  list.className = "mission-history-list";
-  const visibleHistory = expanded
+function renderMissionHistoryDialog() {
+  elements.missionHistoryList.innerHTML = "";
+  const visibleHistory = missionHistoryExpanded
     ? state.missionHistory
     : state.missionHistory.slice(0, MISSION_HISTORY_PREVIEW_COUNT);
   visibleHistory.forEach((text) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = text;
-    button.addEventListener("click", () => onSelect(text));
-    list.appendChild(button);
+    button.addEventListener("click", () => selectMissionFromHistory(text));
+    elements.missionHistoryList.appendChild(button);
   });
-  container.append(heading, list);
+  elements.missionHistoryToggleButton.hidden = state.missionHistory.length <= MISSION_HISTORY_PREVIEW_COUNT;
+  elements.missionHistoryToggleButton.textContent = missionHistoryExpanded ? "閉じる" : "すべて見る";
+}
 
-  if (state.missionHistory.length > MISSION_HISTORY_PREVIEW_COUNT) {
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "mission-history-toggle";
-    toggle.textContent = expanded ? "閉じる" : "すべて見る";
-    toggle.addEventListener("click", onToggle);
-    container.appendChild(toggle);
+function selectMissionFromHistory(text) {
+  if (missionHistoryContext === "daily") {
+    const inputs = [...elements.dailyMissionInputs.querySelectorAll("input")];
+    const filledTexts = inputs.map((input) => input.value.trim()).filter(Boolean);
+    if (findDuplicateMission([...filledTexts, text])) {
+      elements.missionHistoryError.textContent = `「${text}」は、すでに今日のMissionに選ばれています。`;
+      return;
+    }
+    let target = inputs.find((input) => !input.value.trim());
+    if (!target && inputs.length < XP_RULES.missionMaxCount) {
+      addDailyMissionInput();
+      target = elements.dailyMissionInputs.querySelector("input:last-child");
+    }
+    if (!target) {
+      elements.missionHistoryError.textContent = "Missionは3件まで登録できます。";
+      return;
+    }
+    target.value = text;
+    dailyMissionTargetInput = target;
+    elements.dailyMissionError.textContent = "";
+    updateDailyMissionPrompt();
+    elements.missionHistoryDialog.close();
+    target.focus();
+    return;
   }
-}
 
-function renderQuickMissionHistory() {
-  renderMissionHistory(
-    elements.missionHistoryPanel,
-    missionHistoryExpanded,
-    (text) => {
-      elements.missionInput.value = text;
-      elements.missionInput.focus();
-      elements.missionError.textContent = "";
-    },
-    () => {
-      missionHistoryExpanded = !missionHistoryExpanded;
-      renderQuickMissionHistory();
-    }
-  );
-}
-
-function renderDailyMissionHistory() {
-  renderMissionHistory(
-    elements.dailyMissionHistoryPanel,
-    dailyMissionHistoryExpanded,
-    (text) => {
-      const inputs = [...elements.dailyMissionInputs.querySelectorAll("input")];
-      const target = dailyMissionTargetInput?.isConnected
-        ? dailyMissionTargetInput
-        : inputs.find((input) => !input.value.trim()) || inputs.at(-1);
-      if (!target) return;
-      target.value = text;
-      target.focus();
-      elements.dailyMissionError.textContent = "";
-      updateDailyMissionPrompt();
-    },
-    () => {
-      dailyMissionHistoryExpanded = !dailyMissionHistoryExpanded;
-      renderDailyMissionHistory();
-    }
-  );
+  if (state.missions.length >= XP_RULES.missionMaxCount) {
+    elements.missionHistoryError.textContent = "Missionは3件まで登録できます。";
+    return;
+  }
+  if (findDuplicateMission([text])) {
+    elements.missionHistoryError.textContent = `「${text}」は、すでに今日のMissionに登録されています。`;
+    return;
+  }
+  state.missions.push(createMissionEntry(text));
+  rememberMissionTexts([text]);
+  missionCardExpanded = true;
+  checkAndAwardAchievementBonus();
+  saveState();
+  renderAll();
+  elements.missionHistoryDialog.close();
 }
 
 function openGrowthGarden() {
@@ -1235,35 +1252,35 @@ function saveHabitTheme(event) {
 }
 
 function openQuickAdd(type) {
-  const isMission = type === "mission";
-  const form = isMission ? elements.missionForm : elements.taskForm;
-  const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
-  const input = isMission ? elements.missionInput : elements.taskInput;
-  if (isMission) {
-    missionQuickAddOpen = true;
-    missionHistoryExpanded = false;
-    elements.missionError.textContent = "";
-  }
-  form.hidden = false;
-  button.hidden = true;
-  input.focus();
-  if (isMission) renderQuickMissionHistory();
+  if (type !== "task") return;
+  elements.taskForm.hidden = false;
+  elements.taskOpenButton.hidden = true;
+  elements.taskInput.focus();
 }
 
 function closeQuickAdd(type) {
-  const isMission = type === "mission";
-  const form = isMission ? elements.missionForm : elements.taskForm;
-  const button = isMission ? elements.missionOpenButton : elements.taskOpenButton;
-  const input = isMission ? elements.missionInput : elements.taskInput;
-  if (isMission) {
-    missionQuickAddOpen = false;
-    missionHistoryExpanded = false;
-    elements.missionError.textContent = "";
+  if (type !== "task") return;
+  elements.taskForm.hidden = true;
+  elements.taskOpenButton.hidden = false;
+  elements.taskInput.value = "";
+  elements.taskInput.blur();
+}
+
+function openMissionAddDialog() {
+  if (state.missions.length >= XP_RULES.missionMaxCount) {
+    elements.missionError.textContent = "Missionは3件まで登録できます。";
+    return;
   }
-  form.hidden = true;
-  button.hidden = isMission && state.missions.length >= XP_RULES.missionMaxCount;
-  input.value = "";
-  input.blur();
+  elements.missionInput.value = "";
+  elements.missionAddError.textContent = "";
+  elements.missionAddDialog.showModal();
+  elements.missionInput.focus();
+}
+
+function closeMissionAddDialog() {
+  elements.missionInput.value = "";
+  elements.missionAddError.textContent = "";
+  elements.missionAddDialog.close();
 }
 
 function closeOtherMenus(event) {
@@ -1471,17 +1488,17 @@ function addMission(event) {
   const text = elements.missionInput.value.trim();
 
   if (!text) {
-    elements.missionError.textContent = "Missionを入力してください。";
+    elements.missionAddError.textContent = "Missionを入力してください。";
     return;
   }
 
   if (state.missions.length >= XP_RULES.missionMaxCount) {
-    elements.missionError.textContent = "Missionは3件まで登録できます。";
+    elements.missionAddError.textContent = "Missionは3件まで登録できます。";
     return;
   }
 
   if (findDuplicateMission([text])) {
-    elements.missionError.textContent = `「${text}」は、すでに今日のMissionに登録されています。`;
+    elements.missionAddError.textContent = `「${text}」は、すでに今日のMissionに登録されています。`;
     return;
   }
 
@@ -1490,7 +1507,7 @@ function addMission(event) {
   missionCardExpanded = true;
   checkAndAwardAchievementBonus();
   elements.missionError.textContent = "";
-  closeQuickAdd("mission");
+  closeMissionAddDialog();
   saveState();
   renderAll();
 }
@@ -1744,17 +1761,17 @@ function renderHabit() {
 
 function renderMissions() {
   elements.missionList.innerHTML = "";
-  const nextMissionNumber = state.missions.length + 1;
-  elements.missionInput.placeholder = `Mission${["①", "②", "③"][nextMissionNumber - 1] || ""}を入力してEnter`;
-  elements.missionInput.setAttribute("aria-label", `Mission${nextMissionNumber}`);
   const completedCount = state.missions.filter((mission) => mission.completed).length;
   elements.missionCount.textContent = isMissionComplete()
     ? "すべて完了"
     : `${completedCount}件完了`;
   const isFull = state.missions.length >= XP_RULES.missionMaxCount;
-  elements.missionForm.hidden = isFull || (state.missions.length > 0 && !missionQuickAddOpen);
-  elements.missionOpenButton.hidden = isFull || !elements.missionForm.hidden;
-  renderQuickMissionHistory();
+  elements.missionEntryActions.hidden = isFull;
+  elements.missionHistoryOpenButton.disabled = state.missionHistory.length === 0;
+  elements.missionHistoryOpenButton.setAttribute(
+    "aria-label",
+    state.missionHistory.length === 0 ? "履歴から追加（履歴はまだありません）" : "履歴から追加"
+  );
 
   const sortedMissions = [...state.missions].sort(
     (first, second) => Number(first.completed) - Number(second.completed)

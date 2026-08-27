@@ -73,17 +73,12 @@
       </div>
       <div id="missionCardBody" class="collapsible-content">
         <p class="card-subtitle">今日、できたら嬉しいこと</p>
-        <form id="missionForm" class="mission-quick-add-form">
-          <input id="missionInput" type="text" maxlength="80" placeholder="Mission①を入力してEnter" aria-label="Mission①" enterkeyhint="done" autocomplete="off">
-          <section id="missionHistoryPanel" class="mission-history" aria-label="最近のMission" hidden></section>
-          <div class="mission-add-actions">
-            <button id="missionCancelButton" class="secondary-button" type="button">キャンセル</button>
-            <button type="submit">追加</button>
-          </div>
-        </form>
         <p id="missionError" class="error-message" role="alert"></p>
         <ul id="missionList" class="item-list"></ul>
-        <button id="missionOpenButton" class="add-trigger" type="button" hidden>＋ 追加</button>
+        <div id="missionEntryActions" class="mission-entry-actions">
+          <button id="missionOpenButton" class="mission-primary-add" type="button">＋追加</button>
+          <button id="missionHistoryOpenButton" class="mission-history-open" type="button">↻ 履歴から追加</button>
+        </div>
       </div>
     </section>
 
@@ -247,14 +242,41 @@
       <h2>今日、できたら嬉しいことは？</h2>
       <p>今日のMissionを決めてみましょう</p>
       <div id="dailyMissionInputs" class="daily-mission-inputs"></div>
-      <section id="dailyMissionHistoryPanel" class="mission-history" aria-label="最近のMission" hidden></section>
-      <button id="dailyMissionAddButton" class="add-trigger" type="button">＋追加</button>
+      <div class="daily-mission-entry-actions">
+        <button id="dailyMissionAddButton" class="mission-primary-add" type="button">＋追加</button>
+        <button id="dailyMissionHistoryOpenButton" class="mission-history-open" type="button">↻ 履歴から選ぶ</button>
+      </div>
       <p id="dailyMissionError" class="error-message" role="alert"></p>
       <div class="dialog-actions daily-mission-actions">
         <button id="dailyMissionLaterButton" class="secondary-button" type="button">あとで</button>
         <button id="dailyMissionSaveButton" type="submit" disabled>決定</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="missionAddDialog" class="edit-dialog mission-add-dialog">
+    <form id="missionForm">
+      <h2>今日、できたら嬉しいこと</h2>
+      <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力" aria-label="Missionを入力" enterkeyhint="done" autocomplete="off">
+      <p id="missionAddError" class="error-message" role="alert"></p>
+      <div class="dialog-actions mission-dialog-actions">
+        <button id="missionCancelButton" class="secondary-button" type="button">キャンセル</button>
+        <button type="submit">追加</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="missionHistoryDialog" class="edit-dialog mission-history-dialog">
+    <section class="dialog-content">
+      <h2>最近のMission</h2>
+      <p class="mission-history-lead">今日のMissionに追加する項目を選んでください</p>
+      <div id="missionHistoryList" class="mission-history-choice-list"></div>
+      <button id="missionHistoryToggleButton" class="mission-history-toggle" type="button" hidden>すべて見る</button>
+      <p id="missionHistoryError" class="error-message" role="alert"></p>
+      <div class="dialog-actions mission-history-actions">
+        <button id="missionHistoryCancelButton" class="secondary-button" type="button">キャンセル</button>
+      </div>
+    </section>
   </dialog>
 
   <dialog id="onboardingDialog" class="onboarding-dialog">
