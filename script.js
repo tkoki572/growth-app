@@ -907,7 +907,15 @@ function openMissionHistoryDialog(context) {
   missionHistoryExpanded = false;
   elements.missionHistoryError.textContent = "";
   renderMissionHistoryDialog();
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   elements.missionHistoryDialog.showModal();
+  elements.missionHistoryDialog.tabIndex = -1;
+  elements.missionHistoryDialog.focus({ preventScroll: true });
+  window.requestAnimationFrame(() => {
+    if (elements.missionHistoryDialog.open) {
+      elements.missionHistoryDialog.focus({ preventScroll: true });
+    }
+  });
 }
 
 function renderMissionHistoryDialog() {

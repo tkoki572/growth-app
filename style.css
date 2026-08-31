@@ -575,6 +575,7 @@ input[type="checkbox"] {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
+.mission-history-dialog:focus { outline: none; }
 .mission-history-dialog h2 { font-size: 20px; }
 .mission-history-lead { margin: 6px 0 15px; color: var(--color-muted); font-size: 13px; line-height: 1.55; }
 .mission-history-choice-list {
@@ -610,7 +611,8 @@ input[type="checkbox"] {
   font-weight: 400;
   transform: translateY(-52%);
 }
-.mission-history-choice-list button:hover { background: var(--color-primary-soft); }
+.mission-history-choice-list button:hover { background: transparent; }
+.mission-history-choice-list button:active { background: var(--color-primary-soft); }
 .mission-history-toggle {
   width: 100%;
   min-height: 36px;
@@ -622,7 +624,12 @@ input[type="checkbox"] {
   font-weight: 750;
   text-align: left;
 }
-.mission-history-toggle:hover { background: var(--color-primary-soft); }
+.mission-history-toggle:hover { background: transparent; }
+.mission-history-toggle:active { background: var(--color-primary-soft); }
+@media (hover: hover) and (pointer: fine) {
+  .mission-history-choice-list button:hover,
+  .mission-history-toggle:hover { background: var(--color-primary-soft); }
+}
 .mission-history-actions { display: block; margin-top: 12px; }
 .mission-history-actions button { width: 100%; }
 .habit-gap-dialog p { margin: 7px 0 18px; color: var(--color-muted); font-size: 14px; }
