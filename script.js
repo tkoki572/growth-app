@@ -672,8 +672,14 @@ function getDateDistance(fromDate, toDate) {
 }
 
 function getMissingHabitDayCount() {
-  if (!state.habit.name || state.habit.completedToday || !state.habit.lastCompletedDate) return 0;
-  return Math.max(0, getDateDistance(state.habit.lastCompletedDate, getLocalDateString()) - 1);
+  if (!state.habit.name || state.habit.completedToday) return 0;
+  if (state.habit.lastCompletedDate) {
+    return Math.max(0, getDateDistance(state.habit.lastCompletedDate, getLocalDateString()) - 1);
+  }
+  if (state.habit.startedDate) {
+    return Math.max(0, getDateDistance(state.habit.startedDate, getLocalDateString()));
+  }
+  return 0;
 }
 
 function showHabitGapPromptIfNeeded() {
@@ -685,7 +691,10 @@ function showHabitGapPromptIfNeeded() {
 function continueHabitThroughMissingDays() {
   const missingDays = getMissingHabitDayCount();
   if (missingDays > 0) {
-    state.habit.streak = Math.max(1, state.habit.streak) + missingDays;
+    const confirmedStreak = state.habit.lastCompletedDate
+      ? Math.max(1, state.habit.streak)
+      : 0;
+    state.habit.streak = confirmedStreak + missingDays;
     state.habit.totalCompletedDays += missingDays;
     state.habit.lastCompletedDate = getPreviousDateString(getLocalDateString());
     state.habit.completionBaseStreak = null;
@@ -730,13 +739,13 @@ function renderOnboardingStep() {
   const steps = ["Welcome", "Habit", "Mission", "Todo"];
   elements.onboardingProgress.textContent = `${onboardingStep + 1} / ${steps.length}`;
   if (onboardingStep === 0) {
-    elements.onboardingContent.innerHTML = `<div class="onboarding-welcome"><p class="onboarding-brand">Growth App</p><h2>昨日の自分より、少し前へ。</h2><p class="onboarding-lead">小さな達成を積み重ねよう。</p><p>Growth Appでは、<strong>Habit・Mission・Todo</strong>を使って、毎日の小さな達成を積み重ねていきます。</p><button class="onboarding-primary" type="button" data-onboarding-next>はじめる</button></div>`;
+    elements.onboardingContent.innerHTML = `<div class="onboarding-welcome"><p class="onboarding-brand">Rypace</p><h2>昨日の自分より、少し前へ。</h2><p class="onboarding-lead">自分だけのリズムで、自分の歩幅で。</p><p>Rypaceでは、<strong>Habit・Mission・Todo</strong>を使って、毎日の小さな達成を積み重ねていきます。</p><button class="onboarding-primary" type="button" data-onboarding-next>はじめる</button></div>`;
   } else if (onboardingStep === 1) {
     elements.onboardingContent.innerHTML = `${renderGuideCopy("habit")}<input class="onboarding-single-input" type="text" maxlength="50" placeholder="習慣を入力" aria-label="習慣を入力" value="${escapeAttribute(onboardingDraft.habit)}"><button class="onboarding-primary" type="button" data-onboarding-next disabled>次へ</button>`;
   } else {
     const key = onboardingStep === 2 ? "mission" : "todo";
     const values = key === "mission" ? onboardingDraft.missions : onboardingDraft.todos;
-    elements.onboardingContent.innerHTML = `${renderGuideCopy(key)}<div class="onboarding-inputs"></div><button class="add-trigger onboarding-add" type="button">＋追加</button><div class="onboarding-actions"><button class="secondary-button" type="button" data-onboarding-skip>あとで</button><button class="onboarding-primary" type="button" data-onboarding-next>${key === "mission" ? "次へ" : "Growth Appをはじめる"}</button></div>`;
+    elements.onboardingContent.innerHTML = `${renderGuideCopy(key)}<div class="onboarding-inputs"></div><button class="add-trigger onboarding-add" type="button">＋追加</button><div class="onboarding-actions"><button class="secondary-button" type="button" data-onboarding-skip>あとで</button><button class="onboarding-primary" type="button" data-onboarding-next>${key === "mission" ? "次へ" : "Rypaceをはじめる"}</button></div>`;
     const inputs = elements.onboardingContent.querySelector(".onboarding-inputs");
     (values.length ? values : [""]).forEach((value) => appendOnboardingInput(inputs, key, value));
     updateOnboardingAddButton(key);

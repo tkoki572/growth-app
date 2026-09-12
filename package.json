@@ -1,0 +1,23 @@
+{
+  "name": "growth-app",
+  "version": "2.0.0",
+  "private": true,
+  "description": "昨日の自分より、少し前へ。",
+  "scripts": {
+    "build:web": "node scripts/prepare-capacitor-assets.mjs",
+    "cap:sync": "npm run build:web && cap sync",
+    "cap:add:ios": "npm run build:web && cap add ios",
+    "cap:open:ios": "cap open ios",
+    "test:release": "node tests/release-quality.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.0",
+    "@capacitor/ios": "8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
