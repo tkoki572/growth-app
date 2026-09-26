@@ -13,5 +13,7 @@ for (const file of webFiles) {
   await cp(path.join(projectRoot, file), path.join(webDir, file));
 }
 await cp(path.join(projectRoot, "assets"), path.join(webDir, "assets"), { recursive: true });
+// iOSネイティブ素材の原本はWebViewから参照しないため、アプリのWeb Assetsには含めません。
+await rm(path.join(webDir, "assets", "ios"), { recursive: true, force: true });
 
 console.log(`Capacitor Web Assetsを準備しました: ${webDir}`);

@@ -8,6 +8,7 @@
     "cap:sync": "npm run build:web && cap sync",
     "cap:add:ios": "npm run build:web && cap add ios",
     "cap:open:ios": "cap open ios",
+    "ios:verify": "node scripts/prepare-capacitor-assets.mjs && node scripts/verify-ios-readiness.mjs",
     "test:release": "node tests/release-quality.mjs"
   },
   "dependencies": {

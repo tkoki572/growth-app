@@ -22,6 +22,8 @@ npm run build:web
 
 ## MacでiOSプロジェクトを生成する
 
+App Store公開までの詳細手順は[`IOS_RELEASE_CHECKLIST.md`](IOS_RELEASE_CHECKLIST.md)を参照してください。
+
 1. Node.js 22以上、Xcode 26以上を用意します。
 2. `capacitor.config.json`の`appId`が`com.tkoki572.growthapp`であることを確認します。
 3. 依存関係をインストールします。
