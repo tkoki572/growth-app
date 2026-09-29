@@ -58,20 +58,30 @@ await test("Todo追加と共通入力シート", async () => {
   if (await page.locator("#todoCardBody").getAttribute("hidden") !== null) {
     await page.locator("#todoCollapseButton").click();
   }
+  await page.locator("#taskOpenButton").scrollIntoViewIfNeeded();
+  const homeTopBefore = await page.locator("#homeView").evaluate((element) => element.getBoundingClientRect().top);
   await page.locator("#taskOpenButton").click();
   const opened = await page.evaluate(() => ({
     open: taskAddDialog.open,
     active: document.activeElement === taskInput,
     sheetClass: taskAddDialog.classList.contains("input-sheet"),
     locked: document.documentElement.classList.contains("input-sheet-open"),
-    bodyPosition: document.body.style.position
+    bodyPosition: document.body.style.position,
+    compact: taskAddDialog.classList.contains("compact-input-sheet"),
+    sheetHeight: taskAddDialog.getBoundingClientRect().height
   }));
-  assert(opened.open && opened.active && opened.sheetClass, "Todo追加が入力シートで開かない");
+  assert(opened.open && opened.active && opened.sheetClass && opened.compact, "Todo追加がコンパクト入力シートで開かない");
+  assert(opened.sheetHeight <= 220, "入力シートが必要以上に高い");
   assert(opened.locked && opened.bodyPosition === "fixed", "背景位置が固定されていない");
+  await page.setViewportSize({ width: 375, height: 560 });
+  await page.waitForTimeout(100);
+  const homeTopAfterViewportChange = await page.locator("#homeView").evaluate((element) => element.getBoundingClientRect().top);
+  assert(Math.abs(homeTopAfterViewportChange - homeTopBefore) < 1, "viewport変化で背景Homeの位置が変化した");
   await page.locator("#taskCancelButton").click();
   await page.waitForFunction(() => !taskAddDialog.open && !document.documentElement.classList.contains("input-sheet-open"));
   const closed = await page.evaluate(() => !taskAddDialog.open && !document.documentElement.classList.contains("input-sheet-open"));
   assert(closed, "キャンセル後に入力シート状態が解除されない");
+  await page.setViewportSize({ width: 375, height: 812 });
 });
 
 await test("独立Onboardingと既存ユーザー判定", async () => {

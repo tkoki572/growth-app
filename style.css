@@ -584,6 +584,45 @@ input[type="checkbox"] {
   padding-left: max(var(--space-card), env(safe-area-inset-left));
 }
 .input-sheet-open body { overflow: hidden; }
+.input-sheet-open #homeView {
+  transform: translate(var(--app-visual-viewport-left, 0px), var(--app-visual-viewport-top, 0px));
+  pointer-events: none;
+  will-change: transform;
+}
+.compact-input-sheet {
+  max-height: min(220px, var(--app-visual-viewport-height, 220px));
+}
+.compact-input-sheet form {
+  padding-top: 12px;
+  padding-right: max(14px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  padding-left: max(14px, env(safe-area-inset-left));
+}
+.compact-input-sheet h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.compact-input-sheet input[type="text"] {
+  min-height: 40px;
+  margin-top: 0;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.compact-input-sheet .dialog-actions {
+  gap: 7px;
+  margin-top: 10px;
+}
+.compact-input-sheet .dialog-actions button {
+  min-height: 38px;
+  padding: 7px 13px;
+}
 .onboarding-active body { overflow: hidden; }
 .daily-mission-dialog h2 { font-size: 20px; }
 .daily-mission-dialog {
