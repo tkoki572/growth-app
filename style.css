@@ -585,9 +585,10 @@ input[type="checkbox"] {
 }
 .input-sheet-open body { overflow: hidden; }
 .input-sheet-open #homeView {
-  transform: translate(var(--app-visual-viewport-left, 0px), var(--app-visual-viewport-top, 0px));
   pointer-events: none;
-  will-change: transform;
+}
+.input-sheet.keyboard-pending {
+  bottom: clamp(260px, 38vh, 340px);
 }
 .compact-input-sheet {
   max-height: min(220px, var(--app-visual-viewport-height, 220px));
@@ -616,10 +617,13 @@ input[type="checkbox"] {
   padding-bottom: 9px;
 }
 .compact-input-sheet .dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   margin-top: 10px;
 }
 .compact-input-sheet .dialog-actions button {
+  width: 100%;
   min-height: 38px;
   padding: 7px 13px;
 }

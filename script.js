@@ -334,6 +334,7 @@ let onboardingStep = 0;
 let onboardingDraft = { habit: "", missions: [], todos: [] };
 let tutorialViewportBaseline = window.visualViewport?.height || window.innerHeight;
 let inputSheetScrollY = 0;
+let inputViewportBaseline = window.visualViewport?.height || window.innerHeight;
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -626,10 +627,14 @@ function updateVisualViewportHeight() {
   root.style.setProperty("--app-visual-viewport-top", `${Math.round(viewport?.offsetTop || 0)}px`);
   root.style.setProperty("--app-visual-viewport-left", `${Math.round(viewport?.offsetLeft || 0)}px`);
   const inputSheetFocused = document.activeElement?.closest?.("dialog.input-sheet[open]");
-  const keyboardInset = inputSheetFocused && viewport
+  const inputKeyboardOpen = Boolean(
+    inputSheetFocused && viewport && height < inputViewportBaseline - 80
+  );
+  const keyboardInset = inputKeyboardOpen
     ? Math.max(0, window.innerHeight - height - (viewport.offsetTop || 0))
     : 0;
   root.style.setProperty("--app-keyboard-inset", `${Math.round(keyboardInset)}px`);
+  if (inputKeyboardOpen) inputSheetFocused.classList.remove("keyboard-pending");
   root.classList.toggle("tutorial-keyboard-open", keyboardOpen);
   if (keyboardOpen) window.requestAnimationFrame(keepFocusedOnboardingInputVisible);
 }
@@ -676,12 +681,16 @@ function showDailyMissionPromptIfNeeded() {
 function showInputSheet(dialog, input, selectText = false) {
   if (!dialog || dialog.open) return;
   inputSheetScrollY = window.scrollY;
+  inputViewportBaseline = window.visualViewport?.height || window.innerHeight;
   document.documentElement.classList.add("input-sheet-open");
   document.body.style.position = "fixed";
   document.body.style.top = `-${inputSheetScrollY}px`;
   document.body.style.right = "0";
   document.body.style.left = "0";
   document.body.style.width = "100%";
+  if (/iP(?:hone|ad|od)/.test(navigator.userAgent) && window.visualViewport) {
+    dialog.classList.add("keyboard-pending");
+  }
   dialog.showModal();
   window.requestAnimationFrame(() => {
     input?.focus({ preventScroll: true });
@@ -698,6 +707,9 @@ function releaseInputSheetBackground() {
   document.body.style.right = "";
   document.body.style.left = "";
   document.body.style.width = "";
+  document.querySelectorAll("dialog.input-sheet.keyboard-pending").forEach((dialog) => {
+    dialog.classList.remove("keyboard-pending");
+  });
   document.documentElement.style.setProperty("--app-keyboard-inset", "0px");
   window.scrollTo(0, inputSheetScrollY);
 }

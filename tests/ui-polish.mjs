@@ -68,11 +68,15 @@ await test("Todo追加と共通入力シート", async () => {
     locked: document.documentElement.classList.contains("input-sheet-open"),
     bodyPosition: document.body.style.position,
     compact: taskAddDialog.classList.contains("compact-input-sheet"),
-    sheetHeight: taskAddDialog.getBoundingClientRect().height
+    sheetHeight: taskAddDialog.getBoundingClientRect().height,
+    homeTransform: getComputedStyle(homeView).transform,
+    buttonWidths: [...taskAddDialog.querySelectorAll(".dialog-actions button")].map((button) => button.getBoundingClientRect().width)
   }));
   assert(opened.open && opened.active && opened.sheetClass && opened.compact, "Todo追加がコンパクト入力シートで開かない");
   assert(opened.sheetHeight <= 220, "入力シートが必要以上に高い");
   assert(opened.locked && opened.bodyPosition === "fixed", "背景位置が固定されていない");
+  assert(opened.homeTransform === "none", "背景HomeがvisualViewportで移動する構成になっている");
+  assert(Math.abs(opened.buttonWidths[0] - opened.buttonWidths[1]) < 1, "Todo追加ボタンが1:1ではない");
   await page.setViewportSize({ width: 375, height: 560 });
   await page.waitForTimeout(100);
   const homeTopAfterViewportChange = await page.locator("#homeView").evaluate((element) => element.getBoundingClientRect().top);
@@ -82,6 +86,18 @@ await test("Todo追加と共通入力シート", async () => {
   const closed = await page.evaluate(() => !taskAddDialog.open && !document.documentElement.classList.contains("input-sheet-open"));
   assert(closed, "キャンセル後に入力シート状態が解除されない");
   await page.setViewportSize({ width: 375, height: 812 });
+
+  await page.evaluate(() => openMissionAddDialog());
+  const missionWidths = await page.locator("#missionAddDialog .dialog-actions button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().width));
+  assert(Math.abs(missionWidths[0] - missionWidths[1]) < 1, "Mission追加ボタンが1:1ではない");
+  await page.evaluate(() => closeMissionAddDialog());
+  await page.waitForFunction(() => !document.documentElement.classList.contains("input-sheet-open"));
+
+  await page.evaluate(() => openEditDialog("habit"));
+  const editWidths = await page.locator("#editDialog .dialog-actions button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().width));
+  assert(Math.abs(editWidths[0] - editWidths[1]) < 1, "編集ボタンが1:1ではない");
+  await page.evaluate(() => editDialog.close());
+  await page.waitForFunction(() => !document.documentElement.classList.contains("input-sheet-open"));
 });
 
 await test("独立Onboardingと既存ユーザー判定", async () => {
