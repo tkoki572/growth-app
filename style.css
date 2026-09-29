@@ -11,7 +11,7 @@
   --color-garden-border: #d5e7dc;
   --color-complete-surface: #dcebe2;
   --color-complete-border: #bfd7c8;
-  --color-progress: #3b82f6;
+  --color-progress: #245f50;
   --color-danger: #ad342b;
   --radius-card: 16px;
   --radius-control: 10px;
@@ -28,7 +28,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  padding: 30px 16px 56px;
+  padding: calc(30px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   color: var(--color-text);
   background: var(--color-bg);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
@@ -43,20 +43,20 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   margin: 0 auto;
 }
 
-.app-header { padding: 8px 4px 20px; }
+.app-header { padding: 14px 4px 28px; }
 .header-topline {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 .app-name {
   margin: 0;
   color: var(--color-text);
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: .01em;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: .14em;
 }
 .current-date {
   margin: 3px 0 0;
@@ -78,11 +78,14 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   font-weight: 800;
 }
 h1 { margin: 0; font-size: clamp(25px, 7vw, 34px); line-height: 1.3; }
-.header-subcopy {
-  margin: 5px 0 0;
-  color: var(--color-muted);
-  font-size: 15px;
+
+.app-footer {
+  padding: 18px 0 2px;
+  color: #9a9e98;
+  font-size: 11px;
   font-weight: 400;
+  letter-spacing: .04em;
+  text-align: center;
 }
 
 .card {
@@ -516,7 +519,7 @@ input[type="checkbox"] {
 
 .level-up-notice {
   position: fixed;
-  top: 18px;
+  top: calc(18px + env(safe-area-inset-top));
   left: 50%;
   z-index: 10;
   padding: 10px 18px;
@@ -554,6 +557,34 @@ input[type="checkbox"] {
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .secondary-button { color: var(--color-text); background: var(--color-soft); }
 .secondary-button:hover { background: #e8ebe6; }
+
+/* 文字入力はHomeを動かさず、キーボードにつながる共通ボトムシートで扱う。 */
+.input-sheet {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: var(--app-keyboard-inset, 0px);
+  left: 0;
+  width: min(640px, 100%);
+  max-height: min(72dvh, var(--app-visual-viewport-height, 72dvh));
+  margin: 0 auto;
+  overflow-y: auto;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 42px rgba(20, 25, 21, .16);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.input-sheet::backdrop { background: rgba(25, 30, 26, .38); }
+.input-sheet form {
+  padding-right: max(var(--space-card), env(safe-area-inset-right));
+  padding-bottom: max(var(--space-card), env(safe-area-inset-bottom));
+  padding-left: max(var(--space-card), env(safe-area-inset-left));
+}
+.input-sheet-open body { overflow: hidden; }
+.onboarding-active body { overflow: hidden; }
 .daily-mission-dialog h2 { font-size: 20px; }
 .daily-mission-dialog {
   max-height: calc(var(--app-visual-viewport-height, 100dvh) - 24px);
@@ -643,7 +674,23 @@ input[type="checkbox"] {
 }
 .habit-gap-actions span { font-size: 12px; font-weight: 400; opacity: .8; }
 
-.onboarding-dialog {
+#onboardingDialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 0;
+  border-radius: 0;
+}
+#onboardingDialog::backdrop { background: var(--color-bg); }
+.help-dialog {
   width: min(460px, calc(100% - 24px));
   max-height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
   padding: 0;
@@ -654,29 +701,26 @@ input[type="checkbox"] {
   border-radius: 20px;
   box-shadow: 0 22px 60px rgba(20, 30, 23, .2);
 }
-.onboarding-dialog::backdrop { background: rgba(31, 38, 33, .38); }
+.help-dialog::backdrop { background: rgba(31, 38, 33, .38); }
 .tutorial-keyboard-open body { overflow: hidden; }
 .tutorial-keyboard-open #onboardingDialog[open] {
   position: fixed;
-  top: calc(var(--app-visual-viewport-top, 0px) + 8px);
-  right: auto;
-  bottom: auto;
-  left: calc(var(--app-visual-viewport-left, 0px) + 8px);
-  width: calc(var(--app-visual-viewport-width, 100vw) - 16px);
-  height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
   margin: 0;
 }
 .tutorial-keyboard-open #onboardingDialog .onboarding-panel {
-  width: 100%;
-  height: 100%;
-  max-height: none;
+  max-height: var(--app-visual-viewport-height, 100dvh);
   padding-bottom: max(24px, env(safe-area-inset-bottom));
 }
 .onboarding-panel {
-  max-height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
-  padding: 24px;
+  width: min(520px, 100%);
+  max-height: 100%;
+  margin: 0 auto;
+  padding: calc(34px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -705,7 +749,12 @@ input[type="checkbox"] {
 .onboarding-add { margin-top: 8px; }
 .onboarding-actions { display: grid; grid-template-columns: 1fr 1.35fr; gap: 8px; margin-top: 16px; }
 .onboarding-actions button { width: 100%; margin-top: 0; }
-.help-dialog .onboarding-panel { max-height: calc(var(--app-visual-viewport-height, 100dvh) - 16px); }
+.help-dialog .onboarding-panel {
+  width: auto;
+  max-height: calc(var(--app-visual-viewport-height, 100dvh) - 16px);
+  margin: 0;
+  padding: 24px;
+}
 .help-intro { margin: 8px 0 18px; color: var(--color-muted); font-size: 14px; line-height: 1.7; }
 .help-content { display: grid; gap: 10px; }
 .help-content article { padding: 16px; background: var(--color-soft); border-radius: 13px; }
@@ -749,7 +798,7 @@ input[type="checkbox"] {
   max-width: 720px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 12px 6px 52px;
+  padding: calc(12px + env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) calc(52px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
   animation: garden-fade .35s ease both;
 }
 .garden-mode { background: #f3f6f1; }
@@ -1067,7 +1116,8 @@ input[type="checkbox"] {
 
 @media (max-width: 480px) {
   :root { --space-card: 17px; --radius-card: 14px; }
-  body { padding: 18px 10px 40px; }
+  body { padding: calc(20px + env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+  .app-header { padding-top: 12px; padding-bottom: 26px; }
   .input-row { align-items: stretch; flex-direction: column; }
   .input-row button { width: 100%; }
   .progress-label { align-items: center; flex-direction: row; gap: 8px; }

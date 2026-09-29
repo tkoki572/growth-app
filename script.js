@@ -333,6 +333,7 @@ let missionHistoryContext = "home";
 let onboardingStep = 0;
 let onboardingDraft = { habit: "", missions: [], todos: [] };
 let tutorialViewportBaseline = window.visualViewport?.height || window.innerHeight;
+let inputSheetScrollY = 0;
 
 const elements = {
   homeView: document.getElementById("homeView"),
@@ -404,6 +405,8 @@ const elements = {
   todoCardBody: document.getElementById("todoCardBody"),
   todoCollapseButton: document.getElementById("todoCollapseButton"),
   taskForm: document.getElementById("taskForm"),
+  taskAddDialog: document.getElementById("taskAddDialog"),
+  taskCancelButton: document.getElementById("taskCancelButton"),
   taskOpenButton: document.getElementById("taskOpenButton"),
   taskInput: document.getElementById("taskInput"),
   taskError: document.getElementById("taskError"),
@@ -591,6 +594,7 @@ function setUpEventListeners() {
   elements.missionHistoryCancelButton.addEventListener("click", () => elements.missionHistoryDialog.close());
   elements.taskOpenButton.addEventListener("click", () => openQuickAdd("task"));
   elements.taskForm.addEventListener("submit", addTask);
+  elements.taskCancelButton.addEventListener("click", () => closeQuickAdd("task"));
   elements.editForm.addEventListener("submit", saveEditedItem);
   elements.editCancelButton.addEventListener("click", () => elements.editDialog.close());
   elements.scheduleDialog.querySelectorAll("[data-schedule-days]").forEach((button) => {
@@ -598,6 +602,9 @@ function setUpEventListeners() {
   });
   elements.scheduleDateForm.addEventListener("submit", scheduleTaskByDate);
   elements.scheduleCancelButton.addEventListener("click", () => elements.scheduleDialog.close());
+  document.querySelectorAll("dialog.input-sheet").forEach((dialog) => {
+    dialog.addEventListener("close", releaseInputSheetBackground);
+  });
   document.addEventListener("toggle", closeOtherMenus, true);
   document.addEventListener("click", closeMenusFromOutside);
 }
@@ -618,6 +625,11 @@ function updateVisualViewportHeight() {
   root.style.setProperty("--app-visual-viewport-width", `${Math.round(width)}px`);
   root.style.setProperty("--app-visual-viewport-top", `${Math.round(viewport?.offsetTop || 0)}px`);
   root.style.setProperty("--app-visual-viewport-left", `${Math.round(viewport?.offsetLeft || 0)}px`);
+  const inputSheetFocused = document.activeElement?.closest?.("dialog.input-sheet[open]");
+  const keyboardInset = inputSheetFocused && viewport
+    ? Math.max(0, window.innerHeight - height - (viewport.offsetTop || 0))
+    : 0;
+  root.style.setProperty("--app-keyboard-inset", `${Math.round(keyboardInset)}px`);
   root.classList.toggle("tutorial-keyboard-open", keyboardOpen);
   if (keyboardOpen) window.requestAnimationFrame(keepFocusedOnboardingInputVisible);
 }
@@ -658,8 +670,36 @@ function showDailyMissionPromptIfNeeded() {
   elements.dailyMissionError.textContent = "";
   dailyMissionTargetInput = null;
   addDailyMissionInput();
-  elements.dailyMissionDialog.showModal();
-  elements.dailyMissionInputs.querySelector("input").focus();
+  showInputSheet(elements.dailyMissionDialog, elements.dailyMissionInputs.querySelector("input"));
+}
+
+function showInputSheet(dialog, input, selectText = false) {
+  if (!dialog || dialog.open) return;
+  inputSheetScrollY = window.scrollY;
+  document.documentElement.classList.add("input-sheet-open");
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${inputSheetScrollY}px`;
+  document.body.style.right = "0";
+  document.body.style.left = "0";
+  document.body.style.width = "100%";
+  dialog.showModal();
+  window.requestAnimationFrame(() => {
+    input?.focus({ preventScroll: true });
+    if (selectText) input?.select();
+    updateVisualViewportHeight();
+  });
+}
+
+function releaseInputSheetBackground() {
+  if (document.querySelector("dialog.input-sheet[open]")) return;
+  document.documentElement.classList.remove("input-sheet-open");
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.right = "";
+  document.body.style.left = "";
+  document.body.style.width = "";
+  document.documentElement.style.setProperty("--app-keyboard-inset", "0px");
+  window.scrollTo(0, inputSheetScrollY);
 }
 
 function getDateDistance(fromDate, toDate) {
@@ -725,6 +765,9 @@ function restartHabitFromToday() {
 function startOnboarding() {
   onboardingStep = 0;
   onboardingDraft = { habit: "", missions: [], todos: [] };
+  elements.homeView.hidden = true;
+  elements.homeView.setAttribute("aria-hidden", "true");
+  document.documentElement.classList.add("onboarding-active");
   renderOnboardingStep();
   elements.onboardingDialog.showModal();
   updateVisualViewportHeight();
@@ -784,7 +827,7 @@ function bindOnboardingControls() {
   if (habitInput) {
     habitInput.addEventListener("input", () => { next.disabled = !habitInput.value.trim(); });
     next.disabled = !habitInput.value.trim();
-    habitInput.focus();
+    habitInput.focus({ preventScroll: true });
   }
   next.addEventListener("click", () => advanceOnboarding(false));
   if (skip) skip.addEventListener("click", () => advanceOnboarding(true));
@@ -825,6 +868,9 @@ function finishOnboarding() {
   renderAll();
   elements.onboardingDialog.close();
   document.documentElement.classList.remove("tutorial-keyboard-open");
+  document.documentElement.classList.remove("onboarding-active");
+  elements.homeView.hidden = false;
+  elements.homeView.removeAttribute("aria-hidden");
 }
 
 function openHelpDialog() {
@@ -1270,17 +1316,17 @@ function saveHabitTheme(event) {
 
 function openQuickAdd(type) {
   if (type !== "task") return;
-  elements.taskForm.hidden = false;
-  elements.taskOpenButton.hidden = true;
-  elements.taskInput.focus();
+  elements.taskInput.value = "";
+  elements.taskError.textContent = "";
+  showInputSheet(elements.taskAddDialog, elements.taskInput);
 }
 
 function closeQuickAdd(type) {
   if (type !== "task") return;
-  elements.taskForm.hidden = true;
-  elements.taskOpenButton.hidden = false;
   elements.taskInput.value = "";
+  elements.taskError.textContent = "";
   elements.taskInput.blur();
+  if (elements.taskAddDialog.open) elements.taskAddDialog.close();
 }
 
 function openMissionAddDialog() {
@@ -1290,8 +1336,7 @@ function openMissionAddDialog() {
   }
   elements.missionInput.value = "";
   elements.missionAddError.textContent = "";
-  elements.missionAddDialog.showModal();
-  elements.missionInput.focus();
+  showInputSheet(elements.missionAddDialog, elements.missionInput);
 }
 
 function closeMissionAddDialog() {
@@ -1325,9 +1370,7 @@ function openEditDialog(type, id = null) {
   elements.editInput.maxLength = type === "habit" ? 50 : type === "mission" ? 80 : 100;
   elements.editInput.value = type === "habit" ? item.name : item.text;
   document.querySelectorAll("details.action-menu[open]").forEach((menu) => { menu.open = false; });
-  elements.editDialog.showModal();
-  elements.editInput.focus();
-  elements.editInput.select();
+  showInputSheet(elements.editDialog, elements.editInput, true);
 }
 
 function saveEditedItem(event) {

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Rypace</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -16,8 +16,6 @@
         </div>
         <button id="helpButton" class="help-button" type="button" aria-label="Rypaceの使い方">？</button>
       </div>
-      <h1>昨日の自分より、少し前へ。</h1>
-      <p class="header-subcopy">自分だけのリズムで、自分の歩幅で。</p>
     </header>
 
     <section id="habitCard" class="card habit-card" aria-labelledby="habitHeading">
@@ -91,9 +89,6 @@
       </div>
       <div id="todoCardBody" class="collapsible-content">
         <p class="card-subtitle">いつかやること</p>
-        <form id="taskForm" class="quick-add-form" hidden>
-          <input id="taskInput" type="text" maxlength="100" placeholder="Todoを入力してEnter" aria-label="Todo" enterkeyhint="done" autocomplete="off">
-        </form>
         <p id="taskError" class="error-message" role="alert"></p>
         <ul id="taskList" class="item-list"></ul>
         <button id="taskOpenButton" class="add-trigger" type="button">＋ 追加</button>
@@ -144,6 +139,8 @@
       </span>
       <span class="garden-entry-arrow" aria-hidden="true">›</span>
     </button>
+
+    <footer class="app-footer">Rypace&nbsp;&nbsp;v1.0</footer>
 
   </main>
 
@@ -207,7 +204,7 @@
     <p class="garden-afterword">今日も、少し前へ進めた。</p>
   </main>
 
-  <dialog id="editDialog" class="edit-dialog">
+  <dialog id="editDialog" class="edit-dialog input-sheet">
     <form id="editForm" method="dialog">
       <h2 id="editDialogTitle">項目を編集</h2>
       <input id="editInput" type="text" maxlength="100" aria-labelledby="editDialogTitle">
@@ -237,7 +234,7 @@
     </form>
   </dialog>
 
-  <dialog id="dailyMissionDialog" class="edit-dialog daily-mission-dialog">
+  <dialog id="dailyMissionDialog" class="edit-dialog input-sheet daily-mission-dialog">
     <form id="dailyMissionForm" method="dialog">
       <h2>今日、できたら嬉しいことは？</h2>
       <p>今日のMissionを決めてみましょう</p>
@@ -254,13 +251,25 @@
     </form>
   </dialog>
 
-  <dialog id="missionAddDialog" class="edit-dialog mission-add-dialog">
+  <dialog id="missionAddDialog" class="edit-dialog input-sheet mission-add-dialog">
     <form id="missionForm">
       <h2>今日、できたら嬉しいこと</h2>
       <input id="missionInput" type="text" maxlength="80" placeholder="Missionを入力" aria-label="Missionを入力" enterkeyhint="done" autocomplete="off">
       <p id="missionAddError" class="error-message" role="alert"></p>
       <div class="dialog-actions mission-dialog-actions">
         <button id="missionCancelButton" class="secondary-button" type="button">キャンセル</button>
+        <button type="submit">追加</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="taskAddDialog" class="edit-dialog input-sheet task-add-dialog">
+    <form id="taskForm">
+      <h2>Todoを追加</h2>
+      <input id="taskInput" type="text" maxlength="100" placeholder="Todoを入力" aria-label="Todo" enterkeyhint="done" autocomplete="off">
+      <p id="taskError" class="error-message" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="taskCancelButton" class="secondary-button" type="button">キャンセル</button>
         <button type="submit">追加</button>
       </div>
     </form>
