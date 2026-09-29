@@ -631,12 +631,16 @@ function updateVisualViewportHeight() {
     inputSheetFocused && viewport && height < inputViewportBaseline - 80
   );
   const keyboardInset = inputKeyboardOpen
-    ? Math.max(0, window.innerHeight - height - (viewport.offsetTop || 0))
+    ? getInputKeyboardInset(height, viewport.offsetTop || 0)
     : 0;
   root.style.setProperty("--app-keyboard-inset", `${Math.round(keyboardInset)}px`);
   if (inputKeyboardOpen) inputSheetFocused.classList.remove("keyboard-pending");
   root.classList.toggle("tutorial-keyboard-open", keyboardOpen);
   if (keyboardOpen) window.requestAnimationFrame(keepFocusedOnboardingInputVisible);
+}
+
+function getInputKeyboardInset(viewportHeight, viewportOffsetTop = 0) {
+  return Math.max(0, inputViewportBaseline - viewportHeight - viewportOffsetTop);
 }
 
 function handleOnboardingFocus(event) {

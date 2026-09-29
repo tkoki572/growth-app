@@ -55,6 +55,15 @@ await test("Homeヘッダー・ブランドカラー・Version", async () => {
 
 await test("Todo追加と共通入力シート", async () => {
   await loadExistingUser();
+  const keyboardGeometry = await page.evaluate(() => {
+    inputViewportBaseline = 812;
+    return {
+      noKeyboard: getInputKeyboardInset(812, 0),
+      keyboard: getInputKeyboardInset(500, 12)
+    };
+  });
+  assert(keyboardGeometry.noKeyboard === 0, "キーボードなしでもシート位置が補正される");
+  assert(keyboardGeometry.keyboard === 300, "入力前viewport基準のキーボード位置計算が不正");
   if (await page.locator("#todoCardBody").getAttribute("hidden") !== null) {
     await page.locator("#todoCollapseButton").click();
   }
