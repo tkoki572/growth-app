@@ -372,6 +372,7 @@ const elements = {
   habitCardBody: document.getElementById("habitCardBody"),
   habitCollapseButton: document.getElementById("habitCollapseButton"),
   habitMenu: document.getElementById("habitMenu"),
+  habitRegisterButton: document.getElementById("habitRegisterButton"),
   habitEditButton: document.getElementById("habitEditButton"),
   habitThemeButton: document.getElementById("habitThemeButton"),
   habitDeleteButton: document.getElementById("habitDeleteButton"),
@@ -421,6 +422,7 @@ const elements = {
   editDialogTitle: document.getElementById("editDialogTitle"),
   editInput: document.getElementById("editInput"),
   editCancelButton: document.getElementById("editCancelButton"),
+  editSubmitButton: document.getElementById("editSubmitButton"),
   habitThemeDialog: document.getElementById("habitThemeDialog"),
   habitThemeForm: document.getElementById("habitThemeForm"),
   habitThemeDialogSelect: document.getElementById("habitThemeDialogSelect"),
@@ -560,6 +562,7 @@ function setUpEventListeners() {
   elements.missionCollapseButton.addEventListener("click", () => toggleCard("mission"));
   elements.todoCollapseButton.addEventListener("click", () => toggleCard("todo"));
   elements.habitForm.addEventListener("submit", saveHabitName);
+  elements.habitRegisterButton.addEventListener("click", openHabitRegistrationDialog);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
   elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
   elements.habitThemeButton.addEventListener("click", openHabitThemeDialog);
@@ -1298,6 +1301,10 @@ function saveHabitName(event) {
     return;
   }
 
+  registerHabit(name);
+}
+
+function registerHabit(name) {
   state.habit.name = name;
   state.habit.theme = HABIT_THEMES[elements.habitThemeSelect.value]
     ? elements.habitThemeSelect.value
@@ -1311,6 +1318,17 @@ function saveHabitName(event) {
   elements.habitInput.value = "";
   saveState();
   renderAll();
+}
+
+function openHabitRegistrationDialog() {
+  if (state.habit.name) return;
+  editContext = { type: "habit-create", id: null };
+  elements.editDialogTitle.textContent = "習慣を登録";
+  elements.editSubmitButton.textContent = "登録";
+  elements.editInput.maxLength = 50;
+  elements.editInput.placeholder = "習慣を入力";
+  elements.editInput.value = "";
+  showInputSheet(elements.editDialog, elements.editInput);
 }
 
 function openHabitThemeDialog() {
@@ -1381,6 +1399,8 @@ function openEditDialog(type, id = null) {
     : state[type === "mission" ? "missions" : "tasks"].find((entry) => entry.id === id);
   if (!item) return;
   editContext = { type, id };
+  elements.editSubmitButton.textContent = "保存";
+  elements.editInput.placeholder = "";
   elements.editDialogTitle.textContent =
     type === "habit" ? "習慣を編集" : type === "mission" ? "Missionを編集" : "Todoを編集";
   elements.editInput.maxLength = type === "habit" ? 50 : type === "mission" ? 80 : 100;
@@ -1393,7 +1413,11 @@ function saveEditedItem(event) {
   event.preventDefault();
   const value = elements.editInput.value.trim();
   if (!value || !editContext) return;
-  if (editContext.type === "habit") {
+  if (editContext.type === "habit-create") {
+    registerHabit(value);
+    elements.editDialog.close();
+    return;
+  } else if (editContext.type === "habit") {
     if (value !== state.habit.name) {
       state.habit.name = value;
       state.habit.completedToday = false;
@@ -1830,7 +1854,9 @@ function renderHabit() {
       ? "初日達成 🌱"
       : `継続 ${state.habit.streak}日目 完了`
     : "";
-  elements.habitForm.hidden = hasHabit;
+  elements.habitForm.hidden = true;
+  elements.habitRegisterButton.hidden = hasHabit;
+  elements.habitCheckLabel.hidden = !hasHabit;
   elements.habitThemeSelect.value = state.habit.theme;
   elements.habitMenu.hidden = !hasHabit;
 }

@@ -127,6 +127,43 @@ await test("独立Onboardingと既存ユーザー判定", async () => {
   assert(!existing.open && !existing.homeHidden, "既存ユーザーがOnboardingへ戻される");
 });
 
+await test("Habit未登録表示と共通入力シート登録", async () => {
+  await loadExistingUser();
+  assert(await page.locator("#habitRegisterButton").isHidden(), "登録済みHabitに登録導線が表示される");
+  assert(await page.locator("#habitCheckLabel").isVisible(), "登録済みHabitの通常UIが表示されない");
+
+  await page.evaluate(() => deleteHabit());
+  const emptyState = await page.evaluate(() => ({
+    registerVisible: !habitRegisterButton.hidden,
+    legacyFormHidden: habitForm.hidden,
+    dummyRowHidden: habitCheckLabel.hidden,
+    name: state.habit.name
+  }));
+  assert(emptyState.registerVisible && emptyState.legacyFormHidden && emptyState.dummyRowHidden && !emptyState.name, "Habit未登録状態が簡潔になっていない");
+
+  await page.locator("#habitRegisterButton").click();
+  const sheet = await page.evaluate(() => ({
+    open: editDialog.open,
+    compact: editDialog.classList.contains("compact-input-sheet"),
+    submitText: editSubmitButton.textContent,
+    active: document.activeElement === editInput
+  }));
+  assert(sheet.open && sheet.compact && sheet.submitText === "登録" && sheet.active, "Habit登録で共通入力シートが開かない");
+  await page.locator("#editInput").fill("散歩");
+  await page.locator("#editSubmitButton").click();
+  const registered = await page.evaluate(() => ({
+    name: state.habit.name,
+    startedDate: state.habit.startedDate,
+    today: getLocalDateString(),
+    streak: state.habit.streak,
+    totalDays: state.habit.totalCompletedDays,
+    registerHidden: habitRegisterButton.hidden,
+    rowVisible: !habitCheckLabel.hidden
+  }));
+  assert(registered.name === "散歩" && registered.startedDate === registered.today && registered.streak === 0, "Habit登録データが不正");
+  assert(registered.totalDays === 0 && registered.registerHidden && registered.rowVisible, "Habit登録後に通常表示へ戻らない");
+});
+
 if (pageErrors.length) results.push({ name: "JavaScript runtime", status: "FAIL", detail: pageErrors.join(" / ") });
 console.log(JSON.stringify(results, null, 2));
 await browser.close();

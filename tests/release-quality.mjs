@@ -67,9 +67,10 @@ await test("Habit登録・達成・取消・再読み込み・二重加算防止
     prepared.missionPromptHandledDate = getLocalDateString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prepared));
   });
-  await page.locator("#habitInput").fill("読書");
-  await page.locator("#habitForm button[type='submit']").click();
-  assert(await page.locator("#habitForm").isHidden(), "Habit登録後も登録フォームが表示されている");
+  await page.locator("#habitRegisterButton").click();
+  await page.locator("#editInput").fill("読書");
+  await page.locator("#editSubmitButton").click();
+  assert(await page.locator("#habitRegisterButton").isHidden(), "Habit登録後も登録導線が表示されている");
   await page.locator("#habitCheckbox").click();
   let values = await page.evaluate(() => ({ points: state.totalPoints, days: state.habit.totalCompletedDays, streak: state.habit.streak }));
   assert(values.points === 5 && values.days === 1 && values.streak === 1, "Habit初日達成値が不正");
@@ -230,6 +231,8 @@ await test("Habit・Mission・Todoの編集と削除", async () => {
   await page.evaluate(() => deleteHabit());
   values = await page.evaluate(() => ({ name: state.habit.name, days: state.habit.totalCompletedDays, points: state.totalPoints }));
   assert(values.name === "" && values.days === 6 && values.points === 0, "Habit削除時の累計または当日XP処理が不正");
+  assert(await page.locator("#habitRegisterButton").isVisible(), "Habit削除後に登録導線が表示されない");
+  assert(await page.locator("#habitForm").isHidden() && await page.locator("#habitCheckLabel").isHidden(), "Habit削除後に旧入力UIまたはダミー行が表示される");
 });
 
 await test("Mission履歴20件・重複排除・最近順・モーダル初期状態", async () => {

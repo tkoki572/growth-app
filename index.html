@@ -39,7 +39,8 @@
       </div>
       <div id="habitCardBody" class="collapsible-content">
         <p class="card-subtitle">たった一つの積み重ね</p>
-        <form id="habitForm" class="habit-form">
+        <button id="habitRegisterButton" class="add-trigger habit-register-trigger" type="button">＋ 習慣を登録</button>
+        <form id="habitForm" class="habit-form" hidden>
           <input id="habitInput" type="text" maxlength="50" placeholder="例：本を10分読む" aria-label="習慣名">
           <label class="habit-theme-field" for="habitThemeSelect" hidden>
             <span>この習慣はどんな時間？</span>
@@ -210,7 +211,7 @@
       <input id="editInput" type="text" maxlength="100" aria-labelledby="editDialogTitle">
       <div class="dialog-actions">
         <button id="editCancelButton" class="secondary-button" type="button">キャンセル</button>
-        <button type="submit">保存</button>
+        <button id="editSubmitButton" type="submit">保存</button>
       </div>
     </form>
   </dialog>
