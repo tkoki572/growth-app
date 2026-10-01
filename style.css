@@ -43,7 +43,38 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   margin: 0 auto;
 }
 
-.app-header { padding: 14px 4px 28px; }
+.app-header {
+  position: relative;
+  isolation: isolate;
+  padding: 14px 4px 28px;
+  overflow: hidden;
+}
+.app-header::before,
+.app-header::after {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+.app-header::before {
+  right: -24%;
+  bottom: -58px;
+  width: 108%;
+  height: 82px;
+  background: rgba(67, 119, 103, .07);
+}
+.app-header::after {
+  bottom: -55px;
+  left: -32%;
+  width: 114%;
+  height: 76px;
+  background: rgba(67, 119, 103, .12);
+}
+.app-header > * {
+  position: relative;
+  z-index: 1;
+}
 .header-topline {
   display: flex;
   align-items: flex-start;
