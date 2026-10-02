@@ -58,17 +58,17 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   pointer-events: none;
 }
 .app-header::before {
-  right: -24%;
-  bottom: -58px;
-  width: 108%;
-  height: 82px;
+  top: 24px;
+  right: -38%;
+  width: 126%;
+  height: 146px;
   background: rgba(67, 119, 103, .07);
 }
 .app-header::after {
-  bottom: -55px;
-  left: -32%;
-  width: 114%;
-  height: 76px;
+  top: 40px;
+  left: -36%;
+  width: 122%;
+  height: 126px;
   background: rgba(67, 119, 103, .12);
 }
 .app-header > * {
