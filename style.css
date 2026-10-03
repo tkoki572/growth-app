@@ -47,7 +47,7 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   position: relative;
   isolation: isolate;
   padding: 14px 4px 28px;
-  overflow: hidden;
+  overflow: visible;
 }
 .app-header::before,
 .app-header::after {
@@ -58,18 +58,18 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   pointer-events: none;
 }
 .app-header::before {
-  top: 24px;
-  right: -38%;
+  top: 32px;
+  right: -45%;
   width: 126%;
-  height: 146px;
-  background: rgba(67, 119, 103, .07);
+  height: 230px;
+  background: rgba(67, 119, 103, .055);
 }
 .app-header::after {
-  top: 40px;
-  left: -36%;
+  top: 48px;
+  left: -43%;
   width: 122%;
-  height: 126px;
-  background: rgba(67, 119, 103, .12);
+  height: 215px;
+  background: rgba(67, 119, 103, .1);
 }
 .app-header > * {
   position: relative;
