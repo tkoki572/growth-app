@@ -44,36 +44,8 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
 }
 
 .app-header {
-  position: relative;
-  isolation: isolate;
   padding: 14px 4px 28px;
-  overflow: visible;
-}
-.app-header::before,
-.app-header::after {
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  content: "";
-  pointer-events: none;
-}
-.app-header::before {
-  top: 32px;
-  right: -45%;
-  width: 126%;
-  height: 230px;
-  background: rgba(67, 119, 103, .055);
-}
-.app-header::after {
-  top: 48px;
-  left: -43%;
-  width: 122%;
-  height: 215px;
-  background: rgba(67, 119, 103, .1);
-}
-.app-header > * {
-  position: relative;
-  z-index: 1;
+  background: radial-gradient(ellipse 82% 105% at 34% 32%, rgba(67, 119, 103, .06) 0%, rgba(67, 119, 103, .02) 28%, rgba(67, 119, 103, 0) 60%);
 }
 .header-topline {
   display: flex;
