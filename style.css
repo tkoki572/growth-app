@@ -45,7 +45,6 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
 
 .app-header {
   padding: 14px 4px 28px;
-  background: radial-gradient(ellipse 82% 105% at 34% 32%, rgba(67, 119, 103, .06) 0%, rgba(67, 119, 103, .02) 28%, rgba(67, 119, 103, 0) 60%);
 }
 .header-topline {
   display: flex;
