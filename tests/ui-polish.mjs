@@ -102,7 +102,7 @@ await test("Todo追加と共通入力シート", async () => {
   await page.evaluate(() => closeMissionAddDialog());
   await page.waitForFunction(() => !document.documentElement.classList.contains("input-sheet-open"));
 
-  await page.evaluate(() => openEditDialog("habit"));
+  await page.evaluate(() => openEditDialog("habit-rename"));
   const editWidths = await page.locator("#editDialog .dialog-actions button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().width));
   assert(Math.abs(editWidths[0] - editWidths[1]) < 1, "編集ボタンが1:1ではない");
   await page.evaluate(() => editDialog.close());

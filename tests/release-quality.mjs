@@ -207,11 +207,11 @@ await test("Habit・Mission・Todoの編集と削除", async () => {
     prepared.totalPoints = 8;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prepared));
   });
-  await page.evaluate(() => openEditDialog("habit"));
+  await page.evaluate(() => openEditDialog("habit-rename"));
   await page.locator("#editInput").fill("新Habit");
   await page.locator("#editForm button[type='submit']").click();
   let values = await page.evaluate(() => ({ name: state.habit.name, streak: state.habit.streak, days: state.habit.totalCompletedDays, points: state.totalPoints }));
-  assert(values.name === "新Habit" && values.streak === 0 && values.days === 7 && values.points === 8, "Habit編集時の記録保持またはXP維持が不正");
+  assert(values.name === "新Habit" && values.streak === 1 && values.days === 7 && values.points === 8, "Habit名前変更で継続またはXPが維持されない");
 
   const missionId = await page.evaluate(() => state.missions[0].id);
   await page.evaluate((id) => openEditDialog("mission", id), missionId);
@@ -230,9 +230,108 @@ await test("Habit・Mission・Todoの編集と削除", async () => {
   assert(await page.evaluate(() => state.tasks.length === 0 && state.totalPoints === 5), "Todo削除時のXP処理が不正");
   await page.evaluate(() => deleteHabit());
   values = await page.evaluate(() => ({ name: state.habit.name, days: state.habit.totalCompletedDays, points: state.totalPoints }));
-  assert(values.name === "" && values.days === 6 && values.points === 0, "Habit削除時の累計または当日XP処理が不正");
+  assert(values.name === "" && values.days === 7 && values.points === 5, "Habit削除時に累計または過去XPが維持されない");
   assert(await page.locator("#habitRegisterButton").isVisible(), "Habit削除後に登録導線が表示されない");
   assert(await page.locator("#habitForm").isHidden() && await page.locator("#habitCheckLabel").isHidden(), "Habit削除後に旧入力UIまたはダミー行が表示される");
+});
+
+await test("Habit記録・変更・再スタート・重複防止", async () => {
+  await resetApp(() => {
+    const prepared = createInitialState();
+    const today = getLocalDateString();
+    prepared.tutorialCompleted = true;
+    prepared.missionPromptHandledDate = today;
+    prepared.totalPoints = 37;
+    prepared.daily.achievementBonusAwarded = true;
+    prepared.daily.completionBonusXp = 2;
+    prepared.habit.name = "読書";
+    prepared.habit.startedDate = addDaysToDateString(today, -5);
+    prepared.habit.completedToday = true;
+    prepared.habit.streak = 4;
+    prepared.habit.lastCompletedDate = today;
+    prepared.habit.totalCompletedDays = 12;
+    prepared.habit.pointAwardDates = [today];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prepared));
+  });
+
+  await page.evaluate(() => openEditDialog("habit-rename"));
+  await page.locator("#editInput").fill("本を読む");
+  await page.locator("#editSubmitButton").click();
+  let values = await page.evaluate(() => ({ ...state.habit, history: state.habitHistory.length, points: state.totalPoints }));
+  assert(values.name === "本を読む" && values.streak === 4 && values.history === 0 && values.points === 37, "名前変更で継続・履歴・XPが変化した");
+
+  await page.evaluate(() => openHabitChangeDialog());
+  await page.locator("#editInput").fill("キャンセルするHabit");
+  await page.locator("#editSubmitButton").click();
+  assert(await page.locator("#habitConfirmDialog").isVisible(), "Habit変更の確認画面が表示されない");
+  await page.locator("#habitConfirmCancelButton").click();
+  values = await page.evaluate(() => ({ name: state.habit.name, streak: state.habit.streak, history: state.habitHistory.length }));
+  assert(values.name === "本を読む" && values.streak === 4 && values.history === 0, "Habit変更確認のキャンセルで状態が変化した");
+
+  await page.evaluate(() => openHabitChangeDialog());
+  await page.locator("#editInput").fill("散歩");
+  await page.locator("#editSubmitButton").click();
+  await page.locator("#habitConfirmSubmitButton").click();
+  values = await page.evaluate(() => {
+    const today = getLocalDateString();
+    return { habit: state.habit, history: state.habitHistory, points: state.totalPoints, today, expectedStart: addDaysToDateString(today, -5) };
+  });
+  assert(values.habit.name === "散歩" && values.habit.streak === 0 && !values.habit.completedToday && values.habit.startedDate === values.today, "Habit変更後の新規開始状態が不正");
+  assert(values.history.length === 1 && values.history[0].name === "本を読む" && values.history[0].streak === 4, "Habit変更時の記録保存が不正");
+  assert(values.history[0].endedDate === values.today && values.history[0].startedDate === values.expectedStart, "Habit記録の開始日または終了日が不正");
+  assert(values.points === 37 && values.habit.totalCompletedDays === 12, "Habit変更でXPまたは累計達成日数が変化した");
+  assert(await page.evaluate(() => state.daily.achievementBonusAwarded && state.daily.achievementBonusFinalized), "Habit変更で獲得済みボーナスが確定されない");
+
+  await page.evaluate(() => openHabitChangeDialog());
+  await page.locator("#editInput").fill("筋トレ");
+  await page.locator("#editSubmitButton").click();
+  await page.locator("#habitConfirmSubmitButton").click();
+  assert(await page.evaluate(() => state.habit.name === "筋トレ" && state.habit.streak === 0 && state.habitHistory.length === 1), "同日複数変更で実績のない記録が作成された");
+
+  await page.evaluate(() => {
+    state.habit.streak = 3;
+    state.habit.lastCompletedDate = addDaysToDateString(getLocalDateString(), -2);
+    state.habit.startedDate = addDaysToDateString(getLocalDateString(), -4);
+    state.habit.completedToday = false;
+    continueHabitThroughMissingDays();
+  });
+  assert(await page.evaluate(() => state.habitHistory.length === 1 && state.habit.streak === 4 && state.habit.startedDate === addDaysToDateString(getLocalDateString(), -4)), "「続けていた」で履歴・開始日・継続処理が不正");
+
+  await page.evaluate(() => {
+    const yesterday = getPreviousDateString(getLocalDateString());
+    state.habit.name = "本を読む";
+    state.habit.streak = 3;
+    state.habit.lastCompletedDate = yesterday;
+    state.habit.startedDate = addDaysToDateString(yesterday, -2);
+    saveState();
+    restartHabitFromToday();
+  });
+  values = await page.evaluate(() => ({ history: state.habitHistory, habit: state.habit, points: state.totalPoints }));
+  assert(values.history.length === 2 && values.history[1].name === "本を読む" && values.history[1].streak === 3, "再スタート時の別期間記録が不正");
+  assert(values.habit.name === "本を読む" && values.habit.streak === 0 && values.habit.startedDate === await page.evaluate(() => getLocalDateString()) && values.points === 37, "再スタートで開始日・Habit名・XPが変化した");
+
+  await page.evaluate(() => {
+    state.habit.streak = 2;
+    state.habit.lastCompletedDate = getPreviousDateString(getLocalDateString());
+  });
+  await page.evaluate(() => openHabitDeleteConfirmation());
+  await page.locator("#habitConfirmCancelButton").click();
+  assert(await page.evaluate(() => state.habit.name === "本を読む" && state.habitHistory.length === 2), "削除確認のキャンセルで状態が変化した");
+  await page.evaluate(() => openHabitDeleteConfirmation());
+  await page.locator("#habitConfirmSubmitButton").click();
+  assert(await page.evaluate(() => !state.habit.name && state.habitHistory.length === 2 && state.totalPoints === 37), "2日以下の終了または削除確定で履歴・XPが不正");
+
+  await page.locator("#habitHistoryButton").click();
+  const historyUi = await page.locator("#habitHistoryList .habit-history-entry").evaluateAll((entries) => entries.map((entry) => ({
+    columns: entry.children.length,
+    period: entry.querySelector(".habit-history-period")?.textContent,
+    name: entry.querySelector(".habit-history-name")?.textContent,
+    streak: entry.querySelector(".habit-history-streak")?.textContent
+  })));
+  assert(historyUi.length === 2 && historyUi.every((entry) => entry.columns === 3), "Habit記録が横1行3列で表示されない");
+  assert(historyUi[0].name === "本を読む" && historyUi[0].streak === "4日", "Habit記録が古い順に表示されない");
+  assert(historyUi[1].name === "本を読む" && historyUi[1].streak === "3日", "最新のHabit記録が最下段に表示されない");
+  assert(await page.locator("#habitHistoryList").evaluate((list) => Math.abs(list.scrollHeight - list.clientHeight - list.scrollTop) < 2), "記録画面が最新記録までスクロールされない");
 });
 
 await test("Mission履歴20件・重複排除・最近順・モーダル初期状態", async () => {
@@ -361,7 +460,7 @@ await test("完了ボーナス・Level・保存互換性", async () => {
   assert(await page.locator("#levelText").textContent() === "Lv.2", "Level表示が累計XPと不整合");
   await page.reload();
   values = await page.evaluate(() => ({ points: state.totalPoints, bonus: state.daily.achievementBonusAwarded, days: state.habit.totalCompletedDays, version: state.version }));
-  assert(values.points === 48 && values.bonus && values.days === 24 && values.version === 17, "保存データの再読込で値が変化した");
+  assert(values.points === 48 && values.bonus && values.days === 24 && values.version === 18, "保存データの再読込で値が変化した");
 });
 
 await test("旧保存形式のMission XP移行", async () => {
@@ -383,7 +482,7 @@ await test("旧保存形式のMission XP移行", async () => {
     missionXp: state.missions.map((mission) => mission.xpAwarded),
     bonus: state.daily.missionThreeBonusAwarded
   }));
-  assert(values.version === 17 && values.points === 8 && values.missionXp.every((xp) => xp === 2) && values.bonus, "旧Mission XPデータの合計維持移行が不正");
+  assert(values.version === 18 && values.points === 8 && values.missionXp.every((xp) => xp === 2) && values.bonus, "旧Mission XPデータの合計維持移行が不正");
 });
 
 await test("Growth Garden非表示・保存データ維持", async () => {

@@ -14,7 +14,17 @@
           <p class="app-name">Rypace</p>
           <p id="currentDate" class="current-date"></p>
         </div>
-        <button id="helpButton" class="help-button" type="button" aria-label="Rypaceの使い方">？</button>
+        <div class="header-actions">
+          <button id="habitHistoryButton" class="habit-history-button" type="button" aria-label="Habit記録を開く">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.5 4.5h10a2 2 0 0 1 2 2v13h-10a2 2 0 0 1-2-2z"></path>
+              <path d="M7.5 8h6M7.5 11h4"></path>
+              <path d="m14.5 15.5 4.2-4.2 1.5 1.5-4.2 4.2-2 .5z"></path>
+            </svg>
+            <span>記録</span>
+          </button>
+          <button id="helpButton" class="help-button" type="button" aria-label="Rypaceの使い方">？</button>
+        </div>
       </div>
     </header>
 
@@ -27,7 +37,8 @@
         <details id="habitMenu" class="action-menu" hidden>
           <summary aria-label="習慣の操作">•••</summary>
           <div class="action-menu-panel">
-            <button id="habitEditButton" type="button">編集</button>
+            <button id="habitRenameButton" type="button">名前を変更</button>
+            <button id="habitChangeButton" type="button">Habitを変更</button>
             <button id="habitThemeButton" type="button" hidden>テーマ変更</button>
             <button id="habitDeleteButton" class="danger-action" type="button">削除</button>
           </div>
@@ -302,6 +313,25 @@
       <p class="help-intro">昨日の自分より、少し前へ。<br>自分だけのリズムで、自分の歩幅で。</p>
       <div id="helpContent" class="help-content"></div>
       <button id="helpCloseButton" class="onboarding-primary" type="button">閉じる</button>
+    </section>
+  </dialog>
+
+  <dialog id="habitHistoryDialog" class="edit-dialog habit-history-dialog">
+    <section class="dialog-content">
+      <h2>これまでの習慣</h2>
+      <div id="habitHistoryList" class="habit-history-list"></div>
+      <button id="habitHistoryCloseButton" class="secondary-button habit-history-close" type="button">閉じる</button>
+    </section>
+  </dialog>
+
+  <dialog id="habitConfirmDialog" class="edit-dialog habit-confirm-dialog">
+    <section class="dialog-content">
+      <h2 id="habitConfirmTitle"></h2>
+      <p id="habitConfirmMessage"></p>
+      <div class="dialog-actions">
+        <button id="habitConfirmCancelButton" class="secondary-button" type="button">キャンセル</button>
+        <button id="habitConfirmSubmitButton" type="button"></button>
+      </div>
     </section>
   </dialog>
 

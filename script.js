@@ -97,7 +97,7 @@ function formatDisplayDate(dateString) {
 
 function createInitialState() {
   return {
-    version: 17,
+    version: 18,
     lastUsedDate: getLocalDateString(),
     missionPromptHandledDate: null,
     tutorialCompleted: false,
@@ -117,6 +117,7 @@ function createInitialState() {
     },
     missions: [],
     missionHistory: [],
+    habitHistory: [],
     tasks: [],
     daily: {
       date: getLocalDateString(),
@@ -124,6 +125,7 @@ function createInitialState() {
       missionThreeBonusAwarded: false,
       todoXpCount: 0,
       achievementBonusAwarded: false,
+      achievementBonusFinalized: false,
       completionBonusXp: 0
     },
     reflections: {},
@@ -156,6 +158,25 @@ function mergeState(savedState) {
     if (!trimmed || missionHistory.some((entry) => getMissionKey(entry) === getMissionKey(trimmed))) return;
     missionHistory.push(trimmed);
   });
+  const habitHistory = Array.isArray(savedState?.habitHistory)
+    ? savedState.habitHistory.filter((record) =>
+        record &&
+        typeof record.id === "string" &&
+        typeof record.name === "string" && record.name.trim() &&
+        /^\d{4}-\d{2}-\d{2}$/.test(record.startedDate || "") &&
+        /^\d{4}-\d{2}-\d{2}$/.test(record.endedDate || "") &&
+        Number(record.streak) >= 3
+      ).map((record) => ({
+        id: record.id,
+        name: record.name.trim(),
+        startedDate: record.startedDate,
+        endedDate: record.endedDate,
+        streak: Math.max(3, Number(record.streak) || 0),
+        savedAt: typeof record.savedAt === "string" ? record.savedAt : ""
+      })).sort((first, second) =>
+        (first.savedAt || first.endedDate).localeCompare(second.savedAt || second.endedDate)
+      )
+    : [];
   const isLegacyMissionXp = Number(savedState?.version) <= 14;
   const legacyMissionThreeBonus = isLegacyMissionXp &&
     savedMissions.length === XP_RULES.missionMaxCount &&
@@ -187,7 +208,7 @@ function mergeState(savedState) {
   return {
     ...initialState,
     ...(savedState || {}),
-    version: 17,
+    version: 18,
     totalPoints: Math.max(0, (Number(savedState?.totalPoints) || 0) + missionMigrationAdjustment),
     tutorialCompleted: typeof savedState?.tutorialCompleted === "boolean"
       ? savedState.tutorialCompleted
@@ -232,6 +253,7 @@ function mergeState(savedState) {
         Number(savedDaily.todoXpCount ?? savedDaily.taskPointCount) || 0,
         XP_RULES.todoMaxCount
       ),
+      achievementBonusFinalized: Boolean(savedDaily.achievementBonusFinalized),
       completionBonusXp: Number(savedDaily.completionBonusXp) ||
         (savedDaily.achievementBonusAwarded
           ? (Number(savedState?.version) <= 2 ? 10 : XP_RULES.completionBonus)
@@ -250,6 +272,7 @@ function mergeState(savedState) {
         }))
       : [],
     missionHistory: missionHistory.slice(0, MISSION_HISTORY_MAX_COUNT),
+    habitHistory,
     tasks: Array.isArray(savedState?.tasks)
       ? savedState.tasks.map((task) => ({
           ...task,
@@ -328,6 +351,8 @@ let habitCardExpanded = !state.habit.completedToday;
 let missionCardExpanded = !isMissionComplete();
 let todoCardExpanded = !canCollapseTodo();
 let missionHistoryExpanded = false;
+let pendingHabitAction = null;
+let habitActionInProgress = false;
 let dailyMissionTargetInput = null;
 let missionHistoryContext = "home";
 let onboardingStep = 0;
@@ -359,6 +384,7 @@ const elements = {
   gardenButterfly: document.querySelector(".garden-butterfly"),
   currentDate: document.getElementById("currentDate"),
   helpButton: document.getElementById("helpButton"),
+  habitHistoryButton: document.getElementById("habitHistoryButton"),
   levelCard: document.getElementById("progressCard"),
   levelUpNotice: document.getElementById("levelUpNotice"),
   levelText: document.getElementById("levelText"),
@@ -373,7 +399,8 @@ const elements = {
   habitCollapseButton: document.getElementById("habitCollapseButton"),
   habitMenu: document.getElementById("habitMenu"),
   habitRegisterButton: document.getElementById("habitRegisterButton"),
-  habitEditButton: document.getElementById("habitEditButton"),
+  habitRenameButton: document.getElementById("habitRenameButton"),
+  habitChangeButton: document.getElementById("habitChangeButton"),
   habitThemeButton: document.getElementById("habitThemeButton"),
   habitDeleteButton: document.getElementById("habitDeleteButton"),
   habitInput: document.getElementById("habitInput"),
@@ -441,6 +468,14 @@ const elements = {
   helpDialog: document.getElementById("helpDialog"),
   helpContent: document.getElementById("helpContent"),
   helpCloseButton: document.getElementById("helpCloseButton"),
+  habitHistoryDialog: document.getElementById("habitHistoryDialog"),
+  habitHistoryList: document.getElementById("habitHistoryList"),
+  habitHistoryCloseButton: document.getElementById("habitHistoryCloseButton"),
+  habitConfirmDialog: document.getElementById("habitConfirmDialog"),
+  habitConfirmTitle: document.getElementById("habitConfirmTitle"),
+  habitConfirmMessage: document.getElementById("habitConfirmMessage"),
+  habitConfirmCancelButton: document.getElementById("habitConfirmCancelButton"),
+  habitConfirmSubmitButton: document.getElementById("habitConfirmSubmitButton"),
   habitGapDialog: document.getElementById("habitGapDialog"),
   habitContinuedButton: document.getElementById("habitContinuedButton"),
   habitRestartButton: document.getElementById("habitRestartButton"),
@@ -508,6 +543,7 @@ function handleDateChange() {
     missionThreeBonusAwarded: false,
     todoXpCount: 0,
     achievementBonusAwarded: false,
+    achievementBonusFinalized: false,
     completionBonusXp: 0
   };
   saveState();
@@ -564,9 +600,10 @@ function setUpEventListeners() {
   elements.habitForm.addEventListener("submit", saveHabitName);
   elements.habitRegisterButton.addEventListener("click", openHabitRegistrationDialog);
   elements.habitCheckbox.addEventListener("change", toggleHabit);
-  elements.habitEditButton.addEventListener("click", () => openEditDialog("habit"));
+  elements.habitRenameButton.addEventListener("click", () => openEditDialog("habit-rename"));
+  elements.habitChangeButton.addEventListener("click", openHabitChangeDialog);
   elements.habitThemeButton.addEventListener("click", openHabitThemeDialog);
-  elements.habitDeleteButton.addEventListener("click", deleteHabit);
+  elements.habitDeleteButton.addEventListener("click", openHabitDeleteConfirmation);
   elements.habitThemeForm.addEventListener("submit", saveHabitTheme);
   elements.habitThemeCancelButton.addEventListener("click", () => elements.habitThemeDialog.close());
   elements.dailyMissionForm.addEventListener("submit", saveDailyMissions);
@@ -579,6 +616,10 @@ function setUpEventListeners() {
   });
   elements.helpButton.addEventListener("click", openHelpDialog);
   elements.helpCloseButton.addEventListener("click", () => elements.helpDialog.close());
+  elements.habitHistoryButton.addEventListener("click", openHabitHistoryDialog);
+  elements.habitHistoryCloseButton.addEventListener("click", () => elements.habitHistoryDialog.close());
+  elements.habitConfirmCancelButton.addEventListener("click", closeHabitConfirmation);
+  elements.habitConfirmSubmitButton.addEventListener("click", confirmHabitAction);
   elements.habitGapDialog.addEventListener("cancel", (event) => event.preventDefault());
   elements.habitContinuedButton.addEventListener("click", continueHabitThroughMissingDays);
   elements.habitRestartButton.addEventListener("click", restartHabitFromToday);
@@ -747,6 +788,39 @@ function showHabitGapPromptIfNeeded() {
   return true;
 }
 
+function finalizeHabitPeriod() {
+  const streak = Math.max(0, Number(state.habit.streak) || 0);
+  const startedDate = state.habit.startedDate;
+  const endedDate = state.habit.lastCompletedDate;
+  if (
+    !state.habit.name ||
+    streak < 3 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startedDate || "") ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endedDate || "")
+  ) return null;
+  const existing = state.habitHistory.find((record) =>
+    record.name === state.habit.name &&
+    record.startedDate === startedDate &&
+    record.endedDate === endedDate &&
+    record.streak === streak
+  );
+  if (existing) return existing;
+  const record = {
+    id: createId(),
+    name: state.habit.name,
+    startedDate,
+    endedDate,
+    streak,
+    savedAt: new Date().toISOString()
+  };
+  state.habitHistory.push(record);
+  return record;
+}
+
+function finalizeDailyAchievementXp() {
+  if (state.daily.achievementBonusAwarded) state.daily.achievementBonusFinalized = true;
+}
+
 function continueHabitThroughMissingDays() {
   const missingDays = getMissingHabitDayCount();
   if (missingDays > 0) {
@@ -767,6 +841,8 @@ function continueHabitThroughMissingDays() {
 
 function restartHabitFromToday() {
   const today = getLocalDateString();
+  finalizeHabitPeriod();
+  finalizeDailyAchievementXp();
   state.habit.completedToday = false;
   state.habit.streak = 0;
   state.habit.lastCompletedDate = null;
@@ -779,6 +855,48 @@ function restartHabitFromToday() {
   renderAll();
   elements.habitGapDialog.close();
   showDailyMissionPromptIfNeeded();
+}
+
+function formatHabitHistoryPeriod(startedDate, endedDate) {
+  const [startYear, startMonth, startDay] = startedDate.split("-");
+  const [endYear, endMonth, endDay] = endedDate.split("-");
+  const start = `${startYear}/${startMonth}/${startDay}`;
+  const end = startYear === endYear ? `${endMonth}/${endDay}` : `${endYear}/${endMonth}/${endDay}`;
+  return `${start}〜${end}`;
+}
+
+function renderHabitHistory() {
+  elements.habitHistoryList.replaceChildren();
+  if (state.habitHistory.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "habit-history-empty";
+    empty.textContent = "まだ記録はありません";
+    elements.habitHistoryList.append(empty);
+    return;
+  }
+  state.habitHistory.forEach((record) => {
+    const entry = document.createElement("article");
+    entry.className = "habit-history-entry";
+    const period = document.createElement("p");
+    period.className = "habit-history-period";
+    period.textContent = formatHabitHistoryPeriod(record.startedDate, record.endedDate);
+    const name = document.createElement("p");
+    name.className = "habit-history-name";
+    name.textContent = record.name;
+    const streak = document.createElement("p");
+    streak.className = "habit-history-streak";
+    streak.textContent = `${record.streak}日`;
+    entry.append(period, name, streak);
+    elements.habitHistoryList.append(entry);
+  });
+}
+
+function openHabitHistoryDialog() {
+  renderHabitHistory();
+  elements.habitHistoryDialog.showModal();
+  window.requestAnimationFrame(() => {
+    elements.habitHistoryList.scrollTop = elements.habitHistoryList.scrollHeight;
+  });
 }
 
 function startOnboarding() {
@@ -1394,7 +1512,7 @@ function closeMenusFromOutside(event) {
 }
 
 function openEditDialog(type, id = null) {
-  const item = type === "habit"
+  const item = type === "habit-rename"
     ? state.habit
     : state[type === "mission" ? "missions" : "tasks"].find((entry) => entry.id === id);
   if (!item) return;
@@ -1402,11 +1520,84 @@ function openEditDialog(type, id = null) {
   elements.editSubmitButton.textContent = "保存";
   elements.editInput.placeholder = "";
   elements.editDialogTitle.textContent =
-    type === "habit" ? "習慣を編集" : type === "mission" ? "Missionを編集" : "Todoを編集";
-  elements.editInput.maxLength = type === "habit" ? 50 : type === "mission" ? 80 : 100;
-  elements.editInput.value = type === "habit" ? item.name : item.text;
+    type === "habit-rename" ? "名前を変更" : type === "mission" ? "Missionを編集" : "Todoを編集";
+  elements.editInput.maxLength = type === "habit-rename" ? 50 : type === "mission" ? 80 : 100;
+  elements.editInput.value = type === "habit-rename" ? item.name : item.text;
   document.querySelectorAll("details.action-menu[open]").forEach((menu) => { menu.open = false; });
   showInputSheet(elements.editDialog, elements.editInput, true);
+}
+
+function openHabitChangeDialog() {
+  editContext = { type: "habit-change", id: null };
+  elements.editDialogTitle.textContent = "Habitを変更";
+  elements.editSubmitButton.textContent = "変更";
+  elements.editInput.maxLength = 50;
+  elements.editInput.placeholder = "新しい習慣を入力";
+  elements.editInput.value = "";
+  elements.habitMenu.open = false;
+  showInputSheet(elements.editDialog, elements.editInput);
+}
+
+function showHabitConfirmation(action) {
+  pendingHabitAction = action;
+  const isChange = action.type === "change";
+  elements.habitConfirmTitle.textContent = isChange ? "Habitを変更しますか？" : "Habitを削除しますか？";
+  elements.habitConfirmMessage.textContent = isChange
+    ? "現在のHabitは終了し、新しいHabitを開始します。"
+    : "現在のHabitは終了します。3日以上続けた記録は残ります。";
+  elements.habitConfirmSubmitButton.textContent = isChange ? "変更する" : "削除する";
+  elements.habitConfirmSubmitButton.classList.toggle("danger-confirm", !isChange);
+  elements.habitConfirmSubmitButton.disabled = false;
+  elements.habitConfirmDialog.showModal();
+}
+
+function openHabitChangeConfirmation(name) {
+  elements.editDialog.close();
+  showHabitConfirmation({ type: "change", name });
+}
+
+function openHabitDeleteConfirmation() {
+  if (!state.habit.name) return;
+  elements.habitMenu.open = false;
+  showHabitConfirmation({ type: "delete" });
+}
+
+function closeHabitConfirmation() {
+  if (habitActionInProgress) return;
+  pendingHabitAction = null;
+  elements.habitConfirmDialog.close();
+}
+
+function confirmHabitAction() {
+  if (!pendingHabitAction || habitActionInProgress) return;
+  habitActionInProgress = true;
+  elements.habitConfirmSubmitButton.disabled = true;
+  const action = pendingHabitAction;
+  pendingHabitAction = null;
+  if (action.type === "change") {
+    changeHabit(action.name);
+    saveState();
+    renderAll();
+  } else if (action.type === "delete") {
+    deleteHabit();
+  }
+  elements.habitConfirmDialog.close();
+  habitActionInProgress = false;
+}
+
+function changeHabit(name) {
+  finalizeHabitPeriod();
+  finalizeDailyAchievementXp();
+  state.habit.name = name;
+  state.habit.completedToday = false;
+  state.habit.streak = 0;
+  state.habit.lastCompletedDate = null;
+  state.habit.startedDate = getLocalDateString();
+  state.habit.restartDate = null;
+  state.habit.completionBaseStreak = null;
+  state.habit.completionBaseDate = null;
+  habitCardExpanded = true;
+  checkAndAwardAchievementBonus();
 }
 
 function saveEditedItem(event) {
@@ -1417,19 +1608,11 @@ function saveEditedItem(event) {
     registerHabit(value);
     elements.editDialog.close();
     return;
-  } else if (editContext.type === "habit") {
-    if (value !== state.habit.name) {
-      state.habit.name = value;
-      state.habit.completedToday = false;
-      state.habit.streak = 0;
-      state.habit.lastCompletedDate = null;
-      state.habit.startedDate = getLocalDateString();
-      state.habit.restartDate = null;
-      state.habit.completionBaseStreak = null;
-      state.habit.completionBaseDate = null;
-      habitCardExpanded = true;
-      checkAndAwardAchievementBonus();
-    }
+  } else if (editContext.type === "habit-rename") {
+    state.habit.name = value;
+  } else if (editContext.type === "habit-change") {
+    openHabitChangeConfirmation(value);
+    return;
   } else {
     const collection = editContext.type === "mission" ? state.missions : state.tasks;
     const item = collection.find((entry) => entry.id === editContext.id);
@@ -1498,19 +1681,13 @@ function isFutureTask(task, today = getLocalDateString()) {
 }
 
 function deleteHabit() {
-  const today = getLocalDateString();
-  const pointDateIndex = state.habit.pointAwardDates.indexOf(today);
-  if (pointDateIndex >= 0) {
-    removePoints(XP_RULES.habit);
-    state.habit.pointAwardDates.splice(pointDateIndex, 1);
-    state.habit.totalCompletedDays = Math.max(0, state.habit.totalCompletedDays - 1);
-  }
-  const habitHistory = {
+  finalizeHabitPeriod();
+  finalizeDailyAchievementXp();
+  const habitTotals = {
     pointAwardDates: [...state.habit.pointAwardDates],
     totalCompletedDays: state.habit.totalCompletedDays
   };
-  state.habit = { ...createInitialState().habit, ...habitHistory };
-  syncGardenHabitDate(false);
+  state.habit = { ...createInitialState().habit, ...habitTotals };
   habitCardExpanded = true;
   elements.habitMenu.open = false;
   checkAndAwardAchievementBonus();
@@ -1761,7 +1938,7 @@ function checkAndAwardAchievementBonus() {
     addPoints(XP_RULES.completionBonus);
     state.daily.achievementBonusAwarded = true;
     state.daily.completionBonusXp = XP_RULES.completionBonus;
-  } else if (!isComplete && state.daily.achievementBonusAwarded) {
+  } else if (!isComplete && state.daily.achievementBonusAwarded && !state.daily.achievementBonusFinalized) {
     removePoints(state.daily.completionBonusXp);
     state.daily.achievementBonusAwarded = false;
     state.daily.completionBonusXp = 0;

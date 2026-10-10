@@ -66,6 +66,28 @@ button, input[type="checkbox"], input[type="range"], summary { cursor: pointer; 
   font-size: 13px;
   font-weight: 400;
 }
+.header-actions { display: flex; align-items: center; gap: 7px; }
+.habit-history-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 6px 8px;
+  color: var(--color-primary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.habit-history-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+.habit-history-button:hover { background: var(--color-primary-soft); }
 .help-button {
   display: grid;
   width: 38px;
@@ -719,6 +741,35 @@ input[type="checkbox"] {
   text-align: left;
 }
 .habit-gap-actions span { font-size: 12px; font-weight: 400; opacity: .8; }
+.habit-history-dialog { max-height: min(560px, calc(100dvh - 32px)); }
+.habit-history-dialog h2 { font-size: 20px; }
+.habit-history-list {
+  max-height: min(390px, calc(100dvh - 170px));
+  margin-top: 15px;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.habit-history-entry {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 43px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--color-border);
+}
+.habit-history-entry:last-child { border-bottom: 0; }
+.habit-history-period { margin: 0; color: var(--color-muted); font-size: 10.5px; white-space: nowrap; }
+.habit-history-name { min-width: 0; margin: 0; overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.habit-history-streak { margin: 0; color: var(--color-primary); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.habit-history-empty { margin: 0; padding: 28px 4px; color: var(--color-muted); font-size: 14px; text-align: center; }
+.habit-history-close { width: 100%; margin-top: 14px; }
+.habit-confirm-dialog p { margin: 8px 0 0; color: var(--color-muted); font-size: 14px; line-height: 1.65; }
+.danger-confirm { background: #8e4b46; }
+.danger-confirm:hover { background: #78403c; }
 
 #onboardingDialog {
   position: fixed;
