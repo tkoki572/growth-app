@@ -885,7 +885,7 @@ function renderHabitHistory() {
     name.textContent = record.name;
     const streak = document.createElement("p");
     streak.className = "habit-history-streak";
-    streak.textContent = `${record.streak}日`;
+    streak.textContent = `${record.streak}日間`;
     entry.append(period, name, streak);
     elements.habitHistoryList.append(entry);
   });
@@ -1529,7 +1529,7 @@ function openEditDialog(type, id = null) {
 
 function openHabitChangeDialog() {
   editContext = { type: "habit-change", id: null };
-  elements.editDialogTitle.textContent = "Habitを変更";
+  elements.editDialogTitle.textContent = "習慣を変更";
   elements.editSubmitButton.textContent = "変更";
   elements.editInput.maxLength = 50;
   elements.editInput.placeholder = "新しい習慣を入力";
@@ -1541,7 +1541,7 @@ function openHabitChangeDialog() {
 function showHabitConfirmation(action) {
   pendingHabitAction = action;
   const isChange = action.type === "change";
-  elements.habitConfirmTitle.textContent = isChange ? "Habitを変更しますか？" : "Habitを削除しますか？";
+  elements.habitConfirmTitle.textContent = isChange ? "習慣を変更しますか？" : "Habitを削除しますか？";
   elements.habitConfirmMessage.textContent = isChange
     ? "現在のHabitは終了し、新しいHabitを開始します。"
     : "現在のHabitは終了します。3日以上続けた記録は残ります。";

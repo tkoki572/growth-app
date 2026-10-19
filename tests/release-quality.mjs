@@ -261,9 +261,11 @@ await test("Habit記録・変更・再スタート・重複防止", async () => 
   assert(values.name === "本を読む" && values.streak === 4 && values.history === 0 && values.points === 37, "名前変更で継続・履歴・XPが変化した");
 
   await page.evaluate(() => openHabitChangeDialog());
+  assert(await page.locator("#editDialogTitle").textContent() === "習慣を変更", "Habit変更入力の文言が統一されていない");
   await page.locator("#editInput").fill("キャンセルするHabit");
   await page.locator("#editSubmitButton").click();
   assert(await page.locator("#habitConfirmDialog").isVisible(), "Habit変更の確認画面が表示されない");
+  assert(await page.locator("#habitConfirmTitle").textContent() === "習慣を変更しますか？", "Habit変更確認の文言が統一されていない");
   await page.locator("#habitConfirmCancelButton").click();
   values = await page.evaluate(() => ({ name: state.habit.name, streak: state.habit.streak, history: state.habitHistory.length }));
   assert(values.name === "本を読む" && values.streak === 4 && values.history === 0, "Habit変更確認のキャンセルで状態が変化した");
@@ -329,9 +331,24 @@ await test("Habit記録・変更・再スタート・重複防止", async () => 
     streak: entry.querySelector(".habit-history-streak")?.textContent
   })));
   assert(historyUi.length === 2 && historyUi.every((entry) => entry.columns === 3), "Habit記録が横1行3列で表示されない");
-  assert(historyUi[0].name === "本を読む" && historyUi[0].streak === "4日", "Habit記録が古い順に表示されない");
-  assert(historyUi[1].name === "本を読む" && historyUi[1].streak === "3日", "最新のHabit記録が最下段に表示されない");
+  assert(historyUi[0].name === "本を読む" && historyUi[0].streak === "4日間", "Habit記録が古い順に表示されない");
+  assert(historyUi[1].name === "本を読む" && historyUi[1].streak === "3日間", "最新のHabit記録が最下段に表示されない");
   assert(await page.locator("#habitHistoryList").evaluate((list) => Math.abs(list.scrollHeight - list.clientHeight - list.scrollTop) < 2), "記録画面が最新記録までスクロールされない");
+  assert(await page.locator("#habitHistoryDialog h2").textContent() === "積み重ねた習慣", "Habit記録画面のタイトルが不正");
+  assert(await page.locator("#habitHistoryList").evaluate((list) => getComputedStyle(list).backgroundImage.includes("repeating-linear-gradient")), "Habit記録のノート罫線が表示されない");
+  const historyCloseSize = await page.locator("#habitHistoryCloseButton").evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    return { width: rect.width, height: rect.height, label: button.getAttribute("aria-label") };
+  });
+  assert(historyCloseSize.width >= 44 && historyCloseSize.height >= 44 && historyCloseSize.label === "記録を閉じる", "Habit記録の閉じる操作が44pxのタップ領域を満たさない");
+  await page.locator("#habitHistoryCloseButton").click();
+  assert(!(await page.locator("#habitHistoryDialog").isVisible()), "Habit記録を右上の×で閉じられない");
+  await page.evaluate(() => {
+    state.habitHistory = [];
+    openHabitHistoryDialog();
+  });
+  assert(await page.locator("#habitHistoryList").textContent() === "まだ記録はありません", "記録0件の表示が維持されていない");
+  await page.locator("#habitHistoryCloseButton").click();
 });
 
 await test("Mission履歴20件・重複排除・最近順・モーダル初期状態", async () => {
