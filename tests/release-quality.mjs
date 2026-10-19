@@ -338,9 +338,16 @@ await test("Habit記録・変更・再スタート・重複防止", async () => 
   assert(await page.locator("#habitHistoryList").evaluate((list) => getComputedStyle(list).backgroundImage.includes("repeating-linear-gradient")), "Habit記録のノート罫線が表示されない");
   const historyCloseSize = await page.locator("#habitHistoryCloseButton").evaluate((button) => {
     const rect = button.getBoundingClientRect();
-    return { width: rect.width, height: rect.height, label: button.getAttribute("aria-label") };
+    return { width: rect.width, height: rect.height, label: button.getAttribute("aria-label"), fontSize: parseFloat(getComputedStyle(button).fontSize) };
   });
-  assert(historyCloseSize.width >= 44 && historyCloseSize.height >= 44 && historyCloseSize.label === "記録を閉じる", "Habit記録の閉じる操作が44pxのタップ領域を満たさない");
+  assert(historyCloseSize.width >= 44 && historyCloseSize.height >= 44 && historyCloseSize.label === "記録を閉じる" && historyCloseSize.fontSize <= 17, "Habit記録の閉じる操作のサイズが不正");
+  const notebookMetrics = await page.locator("#habitHistoryList").evaluate((list) => {
+    const style = getComputedStyle(list);
+    const lineHeight = parseFloat(style.getPropertyValue("--habit-history-line-height"));
+    return { lineHeight, visibleLines: list.clientHeight / lineHeight };
+  });
+  assert(notebookMetrics.lineHeight >= 29 && notebookMetrics.visibleLines >= 8 && notebookMetrics.visibleLines <= 10, "Habit記録の罫線が8〜10行の範囲に収まらない");
+  assert(await page.locator("#habitHistoryDialog h2").evaluate((title) => parseFloat(getComputedStyle(title).fontSize) <= 18), "Habit記録タイトルが大きすぎる");
   await page.locator("#habitHistoryCloseButton").click();
   assert(!(await page.locator("#habitHistoryDialog").isVisible()), "Habit記録を右上の×で閉じられない");
   await page.evaluate(() => {

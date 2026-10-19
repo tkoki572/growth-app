@@ -751,9 +751,15 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-left: 12px;
+  min-height: 44px;
+  padding-left: 13px;
 }
-.habit-history-dialog h2 { margin: 0; font-size: 20px; }
+.habit-history-dialog h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
 .habit-history-close {
   display: grid;
   flex: 0 0 44px;
@@ -764,15 +770,15 @@ input[type="checkbox"] {
   border-radius: 50%;
   color: var(--color-muted);
   background: transparent;
-  font-size: 24px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 300;
   line-height: 1;
 }
 .habit-history-close:hover { background: rgba(75, 104, 84, .07); }
 .habit-history-list {
-  --habit-history-line-height: 43px;
+  --habit-history-line-height: 31px;
   position: relative;
-  min-height: calc(var(--habit-history-line-height) * 6);
+  height: calc(var(--habit-history-line-height) * 9);
   max-height: min(430px, calc(100dvh - 126px));
   margin-top: 10px;
   padding: 0 8px 0 22px;
@@ -782,8 +788,8 @@ input[type="checkbox"] {
     to bottom,
     transparent 0,
     transparent calc(var(--habit-history-line-height) - 1px),
-    rgba(69, 94, 77, .12) calc(var(--habit-history-line-height) - 1px),
-    rgba(69, 94, 77, .12) var(--habit-history-line-height)
+    rgba(69, 94, 77, .1) calc(var(--habit-history-line-height) - 1px),
+    rgba(69, 94, 77, .1) var(--habit-history-line-height)
   );
   border-top: 1px solid rgba(69, 94, 77, .08);
   border-bottom: 1px solid rgba(69, 94, 77, .08);
