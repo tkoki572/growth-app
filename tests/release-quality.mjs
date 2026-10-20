@@ -335,6 +335,25 @@ await test("Habit記録・変更・再スタート・重複防止", async () => 
   assert(historyUi[1].name === "本を読む" && historyUi[1].streak === "3日間", "最新のHabit記録が最下段に表示されない");
   assert(await page.locator("#habitHistoryList").evaluate((list) => Math.abs(list.scrollHeight - list.clientHeight - list.scrollTop) < 2), "記録画面が最新記録までスクロールされない");
   assert(await page.locator("#habitHistoryDialog h2").textContent() === "積み重ねた習慣", "Habit記録画面のタイトルが不正");
+  const historyTypography = await page.evaluate(async () => {
+    await document.fonts.load('400 17px "Klee One"', "積み重ねた習慣");
+    const titleStyle = getComputedStyle(document.querySelector("#habitHistoryDialog h2"));
+    const nameStyle = getComputedStyle(document.querySelector(".habit-history-name"));
+    const periodStyle = getComputedStyle(document.querySelector(".habit-history-period"));
+    const streakStyle = getComputedStyle(document.querySelector(".habit-history-streak"));
+    return {
+      loaded: document.fonts.check('400 17px "Klee One"', "積み重ねた習慣"),
+      titleFamily: titleStyle.fontFamily,
+      titleWeight: titleStyle.fontWeight,
+      nameFamily: nameStyle.fontFamily,
+      nameWeight: nameStyle.fontWeight,
+      periodFamily: periodStyle.fontFamily,
+      streakFamily: streakStyle.fontFamily
+    };
+  });
+  assert(historyTypography.loaded && historyTypography.titleFamily.includes("Klee One") && historyTypography.nameFamily.includes("Klee One"), "Habit記録へKlee Oneが読み込まれていない");
+  assert(historyTypography.titleWeight === "400" && historyTypography.nameWeight === "400", "Klee Oneに未収録の擬似ウェイトが使われている");
+  assert(!historyTypography.periodFamily.includes("Klee One") && !historyTypography.streakFamily.includes("Klee One"), "期間または継続日数へKlee Oneが適用されている");
   assert(await page.locator("#habitHistoryList").evaluate((list) => getComputedStyle(list).backgroundImage.includes("repeating-linear-gradient")), "Habit記録のノート罫線が表示されない");
   const historyCloseSize = await page.locator("#habitHistoryCloseButton").evaluate((button) => {
     const rect = button.getBoundingClientRect();
